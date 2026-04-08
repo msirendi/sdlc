@@ -6,7 +6,7 @@
 ## Inputs
 
 - Work item identifier (e.g. `AI-441`)
-- Branch name (e.g. `name/my-fix-branch`)
+- Branch name (e.g. `marek/my-fix-branch`)
 - Repository root with clean local Git state
 - Local `.env` to copy into the worktree
 
@@ -22,17 +22,17 @@
    ```
    git checkout main
    git pull --ff-only origin main
-   git checkout -b name/my-fix-branch
+   git checkout -b marek/my-fix-branch
    ```
 
 2. **Publish the branch** to the remote so it tracks correctly:
    ```
-   git push -u origin name/my-fix-branch
+   git push -u origin marek/my-fix-branch
    ```
 
 3. **Create and open a worktree** for the branch so `main` stays clean:
    ```
-   git worktree add ../worktrees/my-fix-branch name/my-fix-branch
+   git worktree add ../worktrees/my-fix-branch marek/my-fix-branch
    cd ../worktrees/my-fix-branch
    ```
 
@@ -58,9 +58,9 @@
 
 ## Outputs
 
-- Local branch `name/my-fix-branch`
-- Remote branch `origin/name/my-fix-branch` tracking the local branch
-- New worktree checked out to `name/my-fix-branch`
+- Local branch `marek/my-fix-branch`
+- Remote branch `origin/marek/my-fix-branch` tracking the local branch
+- New worktree checked out to `marek/my-fix-branch`
 - `.env` present in the worktree
 - Repository hooks installed locally
 
@@ -73,7 +73,7 @@
 
 ## Completion criteria
 
-- Remote branch `origin/name/my-fix-branch` exists and tracks the local branch.
+- Remote branch `origin/marek/my-fix-branch` exists and tracks the local branch.
 - A dedicated worktree directory is open with a valid `.env`.
 - Repository hooks are installed and passing locally.
 - No uncommitted or untracked state carries over from `main`.

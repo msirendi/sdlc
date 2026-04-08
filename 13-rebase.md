@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Feature branch (e.g. `name/my-fix-branch`)
+- Feature branch (e.g. `marek/my-fix-branch`)
 - Latest target base branch, normally `main`
 
 ## Prerequisites
@@ -18,7 +18,7 @@
 1. **Check if a rebase is needed:**
    ```
    git fetch origin main
-   git log --oneline name/my-fix-branch..origin/main
+   git log --oneline marek/my-fix-branch..origin/main
    ```
    If this outputs commits, `main` has moved ahead and a rebase is warranted.
 
@@ -30,7 +30,7 @@
 
 3. **Perform the rebase:**
    ```
-   git checkout name/my-fix-branch
+   git checkout marek/my-fix-branch
    git rebase origin/main
    ```
 
@@ -50,7 +50,7 @@
 
 6. **Force-push the rebased branch:**
    ```
-   git push --force-with-lease origin name/my-fix-branch
+   git push --force-with-lease origin marek/my-fix-branch
    ```
    Use `--force-with-lease` (not `--force`) to avoid overwriting commits pushed by others.
 
