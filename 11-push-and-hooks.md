@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Updated local branch (e.g. `marek/<ticket-id>`)
+- Updated local branch (e.g. `name/my-fix-branch`)
 - Repository hook configuration
 
 ## Prerequisites
@@ -15,14 +15,20 @@
 
 ## Procedure
 
-1. **Stage and commit** any remaining uncommitted work. Ensure commit messages follow the project's conventions.
+1. **Stage and commit** any remaining uncommitted work. Ensure each commit message follows `Contributing.md`: header only, `<type>(<scope>): <subject>` or `<type>: <subject>`, valid type, imperative lowercase subject, no trailing period, 100 characters max.
 
-2. **Push to the remote:**
+2. **Install hooks locally if they are missing:**
    ```
-   git push origin marek/<ticket-id>
+   pre-commit install
+   pre-commit install --hook-type pre-push
    ```
 
-3. **If pre-commit hooks fire and block the commit or push:**
+3. **Push to the remote:**
+   ```
+   git push origin name/my-fix-branch
+   ```
+
+4. **If pre-commit hooks fire and block the commit or push:**
    - Read the hook output carefully. Identify every distinct issue reported.
    - Common categories:
      - **Linting errors** (ESLint, Ruff, Flake8, etc.): Fix the code. Do not add `// eslint-disable` or `# noqa` unless the rule is genuinely inapplicable and you can articulate why.
@@ -30,21 +36,22 @@
      - **Type errors** (TypeScript, mypy, Pyright): Fix the types. Do not cast to `any` or add `# type: ignore` to suppress.
      - **Secret detection** (detect-secrets, gitleaks): Remove the secret from the code. Rotate the credential if it was ever committed. Add the file to `.gitignore` or use environment variables.
      - **File size or binary checks:** Remove the offending file from the commit.
+     - **PR size or scope policy checks:** Split the work into smaller, single-issue or stacked PRs. Do not override the limit in this branch unless a maintainer has approved an exception.
      - **Test guards** (if hooks run tests): Fix the failing test per Step 6.
 
-4. **After each fix:**
+5. **After each fix:**
    - Re-stage the corrected files.
    - Re-attempt the commit or push.
    - Repeat until hooks pass cleanly.
 
-5. **Never bypass hooks:**
+6. **Never bypass hooks:**
    - Do not use `--no-verify`.
    - Do not temporarily remove hooks from `.pre-commit-config.yaml` or `.husky/`.
    - If a hook is genuinely broken (e.g., references a removed tool), raise it as a separate issue — do not disable it in this branch.
 
-6. **Confirm the push succeeded:**
+7. **Confirm the push succeeded:**
    ```
-   git log --oneline origin/marek/<ticket-id> -5
+   git log --oneline origin/name/my-fix-branch -5
    ```
    Verify the remote branch contains all expected commits.
 
@@ -63,4 +70,5 @@
 
 - All commits are pushed to the remote branch.
 - All pre-commit hooks passed without bypass.
+- Repository size and scope checks pass locally or have an approved exception.
 - No suppression comments (`eslint-disable`, `noqa`, `type: ignore`) were added purely to silence hook failures.

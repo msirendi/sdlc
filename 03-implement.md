@@ -1,7 +1,7 @@
 # Step 3 — Implement the Technical Spec
 
 **Mode:** Automated
-**Objective:** Change the codebase so that the behavior defined in the technical specification is fully implemented, with atomic commits traceable to the spec.
+**Objective:** Change the codebase so that the behavior defined in the technical specification is fully implemented, with atomic commits that follow the repository's commit message conventions.
 
 ## Inputs
 
@@ -17,6 +17,7 @@
 ## Procedure
 
 1. **Follow the change plan sequentially.** Implement each item in the order specified by the spec. Do not skip ahead or interleave unrelated changes.
+   - Keep the branch scoped so the eventual PR stays within repository limits: 25 files changed, 800 total lines changed, and 400 changed lines in any single file. If the work exceeds those limits, split it into smaller, single-issue PRs.
 
 2. **For each change:**
    - Write the minimal code that satisfies the spec item.
@@ -26,19 +27,23 @@
 
 3. **Commit discipline:**
    - Commit after each logically complete unit of work (one spec item, or a tightly coupled group).
-   - Write commit messages that reference the ticket ID and describe *what* and *why*, not *how*.
-   - Format: `<ticket-id>: <imperative summary>` (e.g., `AIP-441: add expiration field to session model`).
+   - Use a header-only commit message in the repository format: `<type>(<scope>): <subject>` or `<type>: <subject>` when no scope is needed.
+   - Choose a valid type from `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `style`, or `test`.
+   - Keep the subject imperative, lowercase at the start, and without a trailing period.
+   - Keep every line of the commit message at 100 characters or fewer.
+   - Example: `feat(auth): add session expiration enforcement`
+   - Put extra rationale in the technical spec or PR description when the header alone is not enough.
    - Do not bundle unrelated changes into a single commit.
 
 4. **Handle discoveries during implementation:**
-   - If the spec is ambiguous or incomplete, resolve the ambiguity in the simplest way consistent with the spec's stated objective. Note the decision in the commit message.
+   - If the spec is ambiguous or incomplete, resolve the ambiguity in the simplest way consistent with the spec's stated objective. Note the decision in the technical spec or PR description.
    - If implementation reveals that the spec needs revision (e.g., an assumption was wrong), update the spec first, then implement.
    - Do not introduce scope beyond what the spec defines without explicit justification.
 
 5. **Avoid premature cleanup:**
    - Do not refactor adjacent code unless the spec calls for it.
    - Do not fix pre-existing linting warnings, formatting issues, or unrelated bugs in the same commits.
-   - Opportunistic improvements go in separate commits clearly labeled as such, or are deferred entirely.
+   - Opportunistic improvements go in separate PRs tied to their own issue, or are deferred entirely.
 
 6. **Verify as you go:**
    - After each commit, confirm the app still builds and the directly affected code path works at a basic level (manual smoke test or running the relevant subset of tests).
@@ -57,6 +62,6 @@
 ## Completion criteria
 
 - All items in the spec's change plan are implemented.
-- Each commit is atomic, well-described, and traceable to the spec.
+- Each commit is atomic, well-described, and follows the repository commit message format.
 - The app builds without errors.
 - No out-of-scope changes are mixed in.

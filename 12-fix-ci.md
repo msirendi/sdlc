@@ -44,6 +44,10 @@
      - Check for missing dependencies (installed locally but not in `package.json` / `requirements.txt`).
      - Check for import path case sensitivity (macOS is case-insensitive, CI Linux is not).
 
+   - **Repository policy failure:** CI rejects the branch because it violates documented workflow constraints (for example PR size or scope rules).
+     - Split the work into smaller, single-issue or stacked PRs, or coordinate a maintainer-approved exception.
+     - Do not disable or weaken the policy check in this branch.
+
    - **Infrastructure failure:** CI runner issue, Docker pull timeout, flaky third-party service.
      - Retry the job once. If it fails again on the same step with the same error, treat it as a real issue.
      - If it's genuinely infrastructure (e.g., Docker Hub rate limit), document it and retry later.

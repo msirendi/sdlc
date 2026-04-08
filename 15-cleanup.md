@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Local feature branch (e.g. `marek/<ticket-id>`)
+- Local feature branch (e.g. `name/my-fix-branch`)
 - Local worktree created for the feature branch
 - Confirmation that the merged remote state is authoritative
 
@@ -23,38 +23,43 @@
 
 2. **Remove the worktree:**
    ```
-   git worktree remove ../worktrees/<ticket-id>
+   git worktree remove ../worktrees/my-fix-branch
    ```
    If the worktree has uncommitted changes (there shouldn't be any), git will warn. Verify nothing is unsaved, then force-remove if needed:
    ```
-   git worktree remove --force ../worktrees/<ticket-id>
+   git worktree remove --force ../worktrees/my-fix-branch
    ```
 
-3. **Delete the local feature branch:**
+3. **Check out `main`:**
    ```
-   git branch -d marek/<ticket-id>
-   ```
-   Use `-d` (not `-D`). If git refuses because the branch is "not fully merged," something went wrong — investigate before forcing deletion.
-
-4. **Optionally delete the remote branch** if GitHub did not auto-delete it on merge:
-   ```
-   git push origin --delete marek/<ticket-id>
+   git checkout main -f
    ```
 
-5. **Pull latest `main`** to ensure the local copy includes the merged work:
+4. **Delete the local feature branch:**
    ```
-   git checkout main && git pull origin main
+   git branch -D name/my-fix-branch
+   ```
+   Use `-D` only after confirming the branch was merged on GitHub. Squash merges do not always make the branch appear "fully merged" to local git history.
+
+5. **Optionally delete the remote branch** if GitHub did not auto-delete it on merge:
+   ```
+   git push origin --delete name/my-fix-branch
    ```
 
-6. **Prune stale remote-tracking references:**
+6. **Pull latest `main`** to ensure the local copy includes the merged work:
+   ```
+   git pull --ff upstream main
+   ```
+
+7. **Prune stale remote-tracking references:**
    ```
    git fetch --prune
    ```
 
-7. **Verify clean state:**
+8. **Verify clean state:**
    - `git worktree list` shows only the main working tree.
-   - `git branch` shows no leftover feature branches for this ticket.
-   - `git branch -r` shows no stale remote-tracking branch for this ticket.
+   - `git branch` shows no leftover feature branches for this change.
+   - `git branch -r` shows no stale remote-tracking branch for this change.
 
 ## Outputs
 

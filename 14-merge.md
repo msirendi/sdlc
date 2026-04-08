@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Remote feature branch (e.g. `marek/<ticket-id>`)
+- Remote feature branch (e.g. `name/my-fix-branch`)
 - Pull request associated with the branch
 - Current review and CI status
 
@@ -22,12 +22,14 @@
    - [ ] All CI checks are green.
    - [ ] No unresolved review comments remain.
    - [ ] The branch is up to date with `main` (no "branch is behind" warning).
+   - [ ] The PR is tied to a single Linear issue and includes a supported closing keyword (for example `Fixes #AI-441`).
+   - [ ] The PR stays within repository size limits, or a maintainer-approved exception is documented.
    - [ ] The PR title and description are accurate and complete.
 
-2. **Select the merge strategy** per project convention:
-   - **Squash and merge:** Preferred when the branch has many small or WIP commits that should collapse into one clean commit on `main`. Ensure the squash commit message is well-written (ticket ID, imperative summary, brief body if needed).
-   - **Rebase and merge:** Preferred when each commit on the branch is already atomic and well-described, and the linear history is valuable.
-   - **Merge commit:** Use only if the project explicitly requires merge commits for traceability.
+2. **Use the repository merge strategy:**
+   - **Squash and merge:** Default and expected for this repository. Ensure the resulting squash commit subject follows `<type>(<scope>): <subject>` and is ready to use as-is.
+   - **Rebase and merge:** Maintainer exception only when each commit is already logical, complete, and compliant with the commit message guidelines.
+   - **Merge commit:** Do not use.
 
 3. **Merge on GitHub.** Confirm the merge completed and the branch indicator shows "Merged."
 
@@ -45,6 +47,7 @@
 - Do not merge with unresolved review concerns.
 - Do not merge while required CI checks are failing.
 - Do not use a merge strategy that violates repository policy.
+- Do not rewrite the squash commit subject into a non-conforming format at merge time.
 
 ## Completion criteria
 

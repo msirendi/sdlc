@@ -24,7 +24,7 @@ Precise, execution-oriented specification of the full lifecycle from product int
 
 | Step | File | Summary |
 |------|------|---------|
-| 14 | [`14-merge.md`](14-merge.md) | Merge feature branch to `main` on GitHub |
+| 14 | [`14-merge.md`](14-merge.md) | Merge feature branch to `main` on GitHub using the repository merge policy |
 | 15 | [`15-cleanup.md`](15-cleanup.md) | Delete local branch and worktree |
 
 ## Intended use
@@ -40,4 +40,6 @@ Each step file is an explicit task description for an automation or operator. Ev
 ## Conventions
 
 - Treat `main` as the integration baseline unless repository conventions require a different default branch.
+- Treat [`Contributing.md`](Contributing.md) as the source of truth for branch setup, hook installation, PR scope limits, commit and PR title format, issue-linking syntax, and merge strategy.
+- Keep each branch and PR tied to a single Linear issue, and use a conventional commit header for every commit and squash-ready PR title.
 - Do not skip tests, validations, reviews, or cleanup tasks unless an explicit higher-priority instruction overrides them.

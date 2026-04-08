@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Linear issue (e.g. `AIP-441`)
+- Linear issue (e.g. `AI-441`)
 - Linked context: description, acceptance criteria, design notes, comments, attachments, related tickets
 - Current codebase and architecture context
 
@@ -21,6 +21,7 @@
    - Acceptance criteria (explicit and implied).
    - Linked tickets, dependencies, or prior art.
    - Any constraints mentioned by product, design, or other engineers.
+   - Whether the work needs to be split into smaller PRs to stay within repository size limits.
 
 2. **Investigate the existing codebase.** Before designing anything:
    - Trace the relevant code paths that will be touched.
@@ -72,6 +73,7 @@
 - Do not omit edge cases, operational constraints, or test implications.
 - Do not assume product intent where the ticket is explicit.
 - Do not smooth over ambiguity; document it as an open question.
+- Do not combine multiple unrelated Linear issues into one implementation plan.
 
 ## Completion criteria
 

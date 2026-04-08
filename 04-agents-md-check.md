@@ -34,7 +34,7 @@
    - The specific code location that violates it.
    - The fix required.
 
-4. **Resolve each discrepancy.** Apply the fix. If a rule conflicts with the technical spec, prefer the rule unless you have a documented reason to deviate — in which case, note the deviation and rationale in a comment or commit message.
+4. **Resolve each discrepancy.** Apply the fix. If a rule conflicts with the technical spec, prefer the rule unless you have a documented reason to deviate — in which case, note the deviation and rationale in a code comment or the PR description.
 
 5. **Re-read `AGENTS.md` one more time** after all fixes to confirm nothing was missed.
 

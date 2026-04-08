@@ -1,11 +1,12 @@
 # Step 7 — Open Pull Request
 
 **Mode:** Automated
-**Objective:** Publish the branch for formal review with a clear PR that accurately frames the intent, scope, and validation status of the change.
+**Objective:** Publish the branch for formal review with a clear, squash-ready PR that accurately frames the intent, scope, and validation status of the change.
 
 ## Inputs
 
-- Feature branch (e.g. `marek/<ticket-id>`)
+- Feature branch (e.g. `name/my-fix-branch`)
+- Single Linear issue for the work (e.g. `AI-441`)
 - Passing or currently understood validation state
 - Summary of implemented behavior and tests
 
@@ -18,21 +19,36 @@
 
 1. **Ensure all commits are pushed:**
    ```
-   git push origin marek/<ticket-id>
+   git push origin name/my-fix-branch
    ```
 
-2. **Open the PR** via the GitHub CLI or web UI:
+2. **Confirm the PR scope is acceptable before opening it:**
+   - The branch maps to a single Linear issue.
+   - The diff stays within repository limits: 25 files changed, 800 total lines changed, and 400 changed lines in any single file.
+   - If those limits are exceeded, split the work into stacked or separate PRs unless a maintainer has approved an exception.
+
+3. **Open the PR** via the GitHub CLI or web UI:
    ```
-   gh pr create --base main --head marek/<ticket-id> --title "<ticket-id>: <concise summary>" --body-file <pr-body.md>
+   gh pr create --base main --head name/my-fix-branch --title "<type>(<scope>): <subject>" --body-file <pr-body.md>
    ```
 
-3. **PR title format:**
+4. **PR title format:**
    ```
-   <ticket-id>: <imperative verb phrase summarizing the change>
+   <type>(<scope>): <subject>
    ```
-   Example: `AIP-441: Add session expiration enforcement to auth middleware`
+   Or, when scope is unnecessary:
+   ```
+   <type>: <subject>
+   ```
+   Use the same conventions as commit messages: valid type, imperative subject, lowercase start, no trailing period, 100 characters max.
+   Example: `fix(auth): enforce session expiration`
 
-4. **PR body must contain:**
+5. **PR body must contain:**
+
+   A dedicated issue-closing line near the top using a supported keyword and the Linear issue ID:
+   ```
+   Fixes #AI-441
+   ```
 
    ### Summary
    One paragraph explaining *what* this PR does and *why* — not how. Link the Linear ticket.
@@ -51,11 +67,11 @@
    - Areas that warrant extra reviewer scrutiny.
    - Anything deferred to a follow-up ticket.
 
-5. **Assign reviewers** per the project's review policy.
+6. **Assign reviewers** per the project's review policy.
 
-6. **Add labels** (e.g., `feature`, `bugfix`, `breaking`) if the project uses them.
+7. **Add labels** (e.g., `feature`, `bugfix`, `breaking`) if the project uses them.
 
-7. **Verify the PR** on GitHub: diff looks clean, no accidental files (`.env`, `.DS_Store`, build artifacts), CI is triggered.
+8. **Verify the PR** on GitHub: diff looks clean, no accidental files (`.env`, `.DS_Store`, build artifacts), CI is triggered.
 
 ## Outputs
 
@@ -66,10 +82,15 @@
 - Do not open the PR against the wrong base branch.
 - Do not omit testing information.
 - Do not understate known limitations or reviewer risk areas.
+- Do not use a PR title that cannot be used as the squash commit subject.
+- Do not open a PR that spans multiple unrelated issues.
 
 ## Completion criteria
 
 - PR is open on GitHub with a complete title and body.
+- The PR title follows the repository commit message conventions.
+- The PR body links the single Linear issue with a supported closing keyword.
 - The diff contains only in-scope changes.
+- The diff stays within repository size limits, or an approved exception is documented.
 - CI has been triggered and is running.
 - Reviewers are assigned.

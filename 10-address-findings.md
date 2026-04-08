@@ -40,9 +40,9 @@
    - The label from the report.
    - The action taken (removed / fixed / justified) and a one-sentence rationale.
 
-4. **Commit the changes** in a single commit:
+4. **Commit the changes** in a single commit using the repository's conventional header format:
    ```
-   <ticket-id>: address semantic review findings
+   refactor(auth): address semantic review findings
    ```
 
 5. **Re-run the test suite** (Step 6) to confirm no regressions from removals or rewrites.

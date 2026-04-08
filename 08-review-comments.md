@@ -48,9 +48,9 @@
 
 7. **Commit the fixes.** Group related review-feedback fixes into a single commit:
    ```
-   <ticket-id>: address review feedback
+   fix(auth): address review feedback
    ```
-   If a fix is substantial (not just a rename or one-liner), give it its own commit with a descriptive message.
+   If a fix is substantial (not just a rename or one-liner), give it its own commit with a descriptive header that still follows `<type>(<scope>): <subject>`.
 
 8. **Push and notify** the reviewer that comments have been addressed.
 
