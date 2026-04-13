@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Approved technical specification from Step 2
+- Approved technical specification from Step 2 at `.sdlc/artifacts/technical-spec.md`
 - Current repository state on the feature branch
 - Existing architecture, conventions, and internal abstractions
 
@@ -37,7 +37,7 @@
 
 4. **Handle discoveries during implementation:**
    - If the spec is ambiguous or incomplete, resolve the ambiguity in the simplest way consistent with the spec's stated objective. Note the decision in the technical spec or PR description.
-   - If implementation reveals that the spec needs revision (e.g., an assumption was wrong), update the spec first, then implement.
+   - If implementation reveals that the spec needs revision (e.g., an assumption was wrong), update `.sdlc/artifacts/technical-spec.md` first, then implement.
    - Do not introduce scope beyond what the spec defines without explicit justification.
 
 5. **Avoid premature cleanup:**

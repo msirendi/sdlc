@@ -8,6 +8,7 @@
 - Linear issue (e.g. `AI-441`)
 - Linked context: description, acceptance criteria, design notes, comments, attachments, related tickets
 - Current codebase and architecture context
+- Canonical output file: `.sdlc/artifacts/technical-spec.md`
 
 ## Prerequisites
 
@@ -27,9 +28,9 @@
    - Trace the relevant code paths that will be touched.
    - Identify the data models, services, API routes, and utilities involved.
    - Note existing patterns, conventions, and abstractions the codebase already uses for similar work.
-   - Read `AGENTS.md` and any architecture docs to understand guardrails.
+   - Read `AGENTS.md` and any architecture docs if they exist to understand repository-specific guardrails.
 
-3. **Produce the technical spec.** The spec must contain:
+3. **Produce the technical spec** in `.sdlc/artifacts/technical-spec.md`. The spec must contain:
 
    ### 3a. Summary
    One paragraph restating the ticket's objective in engineering terms.
@@ -64,7 +65,7 @@
 
 ## Outputs
 
-- Technical specification for the ticket
+- Technical specification for the ticket at `.sdlc/artifacts/technical-spec.md`
 - Traceable mapping from ticket intent to implementation plan
 
 ## Guardrails
@@ -77,6 +78,6 @@
 
 ## Completion criteria
 
-- A written technical spec exists (in the conversation or as a file).
+- A written technical spec exists at `.sdlc/artifacts/technical-spec.md`.
 - Every acceptance criterion is traceable to a planned change and a planned test.
 - No implementation work has started yet.

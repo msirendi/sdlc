@@ -5,9 +5,10 @@
 
 ## Inputs
 
-- `semantic_diff_report.html` from Step 9
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` from Step 9
 - Diff regions labeled `Unclear / possibly superfluous`
 - Diff regions labeled `Weakly justified`
+- Canonical action log: `.sdlc/artifacts/semantic-review-actions.md`
 
 ## Prerequisites
 
@@ -16,7 +17,7 @@
 
 ## Procedure
 
-1. **Open `semantic_diff_report.html`** and extract every edit tagged as:
+1. **Open `.sdlc/reports/semantic_diff_report_<ticket-id>.html`** and extract every edit tagged as:
    - `Unclear / possibly superfluous`
    - `Weakly justified`
 
@@ -35,7 +36,7 @@
    ### Justify
    The edit is intentional and necessary, but its purpose was not obvious from the diff alone. Add a code comment or improve naming so that the rationale is self-evident to the next reader. Do not rely on PR description or commit messages to carry this burden — the code itself must be clear.
 
-3. **Document each decision.** For every flagged item, record:
+3. **Document each decision** in `.sdlc/artifacts/semantic-review-actions.md`. For every flagged item, record:
    - The file and location.
    - The label from the report.
    - The action taken (removed / fixed / justified) and a one-sentence rationale.
@@ -52,6 +53,7 @@
 - Reduced or clarified diff
 - Fewer unjustified changes in the branch
 - Stronger alignment between code and PR objective
+- Decision log at `.sdlc/artifacts/semantic-review-actions.md`
 
 ## Guardrails
 
@@ -62,6 +64,7 @@
 ## Completion criteria
 
 - Every edit flagged as `Unclear / possibly superfluous` or `Weakly justified` has been acted on.
+- `.sdlc/artifacts/semantic-review-actions.md` records the action taken for every flagged edit.
 - No superfluous changes remain in the diff.
 - Weakly justified edits have been either strengthened, removed, or explicitly annotated.
 - The test suite passes after all changes.

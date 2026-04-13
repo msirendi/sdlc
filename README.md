@@ -1,45 +1,116 @@
-# Software Development Lifecycle — Task Descriptions
+# AI-Governed SDLC Pipeline
 
-Precise, execution-oriented specification of the full lifecycle from product intent to code merged into production.
+This repository is now a runnable SDLC package, not just a set of markdown prompts. It contains:
 
-## Automated Steps
+- A 15-step feature delivery process expressed as explicit step files.
+- A Codex-based orchestrator that runs the automated steps in order.
+- Repo bootstrap and artifact templates so later steps can consume durable outputs.
+- Manual closeout checklists for merge and cleanup.
 
-| Step | File | Summary |
-|------|------|---------|
-| 1 | [`01-branch-setup.md`](01-branch-setup.md) | Create feature branch, publish remote, open worktree, copy `.env` |
-| 2 | [`02-technical-spec.md`](02-technical-spec.md) | Review Linear ticket, produce implementation-ready technical spec |
-| 3 | [`03-implement.md`](03-implement.md) | Implement the spec with atomic commits |
-| 4 | [`04-agents-md-check.md`](04-agents-md-check.md) | Audit against `AGENTS.md`, fix all violations |
-| 5 | [`05-tests.md`](05-tests.md) | Write thorough unit and integration tests |
-| 6 | [`06-run-tests.md`](06-run-tests.md) | Run full test suite (unit + integration + e2e), fix all failures |
-| 7 | [`07-open-pr.md`](07-open-pr.md) | Push and open PR with structured description |
-| 8 | [`08-review-comments.md`](08-review-comments.md) | Address every PR review comment with fixes and concise responses |
-| 9 | [`09-semantic-diff-report.md`](09-semantic-diff-report.md) | Generate semantic diff report grouped by engineering purpose |
-| 10 | [`10-address-findings.md`](10-address-findings.md) | Remove, fix, or justify all unclear/weakly justified changes |
-| 11 | [`11-push-and-hooks.md`](11-push-and-hooks.md) | Push changes, fix any pre-commit hook failures |
-| 12 | [`12-fix-ci.md`](12-fix-ci.md) | Diagnose and fix all CI failures |
-| 13 | [`13-rebase.md`](13-rebase.md) | Rebase onto latest `main` if it has advanced |
+## What this governs
 
-## Manual Steps
+The package is designed to govern the full feature lifecycle in a target repository:
 
-| Step | File | Summary |
-|------|------|---------|
-| 14 | [`14-merge.md`](14-merge.md) | Merge feature branch to `main` on GitHub using the repository merge policy |
-| 15 | [`15-cleanup.md`](15-cleanup.md) | Delete local branch and worktree |
+1. Branch setup and isolated worktree creation
+2. Technical specification from task intent
+3. Implementation
+4. Repository instruction compliance review
+5. Test authoring
+6. Full-suite execution
+7. Pull request creation
+8. Review comment handling
+9. Semantic diff analysis
+10. Weak-change cleanup
+11. Push and hook enforcement
+12. CI remediation
+13. Rebase and re-validation
+14. Merge checklist
+15. Cleanup checklist
 
-## Intended use
+Steps `01` through `13` are automated. Steps `14` and `15` are manual by default and remain explicit operator checklists.
 
-Each step file is an explicit task description for an automation or operator. Every file contains:
-- Objective and mode (automated / manual)
-- Inputs and prerequisites
-- Procedure with concrete commands
-- Outputs
-- Guardrails
-- Completion criteria
+## Repository layout
 
-## Conventions
+| Path | Purpose |
+| --- | --- |
+| `01-branch-setup.md` ... `15-cleanup.md` | The canonical SDLC step instructions |
+| [`orchestrator/run-pipeline.sh`](orchestrator/run-pipeline.sh) | Main runner for automated steps |
+| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Bootstraps `.sdlc/` inside a target repo |
+| [`orchestrator/config.sh`](orchestrator/config.sh) | Default model, timeout, retry, and artifact rules |
+| [`orchestrator/lib/`](orchestrator/lib) | Execution, validation, context, and notification helpers |
+| [`templates/`](templates) | Task, spec, PR-body, override, and step templates |
+| [`orchestrating-ai-agents-sdlc-guide.md`](orchestrating-ai-agents-sdlc-guide.md) | Reviewed operating guide aligned to this implementation |
 
-- Treat `main` as the integration baseline unless repository conventions require a different default branch.
-- Treat [`Contributing.md`](Contributing.md) as the source of truth for branch setup, hook installation, PR scope limits, commit and PR title format, issue-linking syntax, and merge strategy.
-- Keep each branch and PR tied to a single Linear issue, and use a conventional commit header for every commit and squash-ready PR title.
-- Do not skip tests, validations, reviews, or cleanup tasks unless an explicit higher-priority instruction overrides them.
+## Target repo contract
+
+Each governed repository should contain a tracked `.sdlc/` directory with:
+
+- `.sdlc/task.md`: feature intent and acceptance criteria
+- `.sdlc/overrides.sh`: optional per-repo timeout or sandbox overrides
+- `.sdlc/artifacts/technical-spec.md`: canonical spec produced by Step 2
+- `.sdlc/artifacts/pr-body.md`: canonical PR description produced by Step 7
+- `.sdlc/artifacts/semantic-review-actions.md`: remediation log produced by Step 10
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 9
+- `.sdlc/logs/`: run logs, summaries, and rolling pipeline context; gitignored
+
+The bootstrap script creates the directories and seed files for you.
+
+## Quick start
+
+Prerequisites:
+
+- `codex` CLI installed, for example `npm install -g @openai/codex`
+- Codex authenticated locally
+- A git repository to govern
+- Any repo-specific access needed by the steps, such as GitHub or Linear
+
+1. Bootstrap a target repository:
+
+   ```bash
+   /path/to/this/repo/orchestrator/init-target-repo.sh /path/to/target-repo
+   ```
+
+2. Fill in `/path/to/target-repo/.sdlc/task.md`.
+
+3. Preview the run:
+
+   ```bash
+   SDLC_HOME=/path/to/this/repo \
+     /path/to/this/repo/orchestrator/run-pipeline.sh \
+     --repo /path/to/target-repo \
+     --dry-run
+   ```
+
+4. Run the automated SDLC:
+
+   ```bash
+   SDLC_HOME=/path/to/this/repo \
+     /path/to/this/repo/orchestrator/run-pipeline.sh \
+     --repo /path/to/target-repo
+   ```
+
+5. Resume or target a single step as needed:
+
+   ```bash
+   SDLC_HOME=/path/to/this/repo \
+     /path/to/this/repo/orchestrator/run-pipeline.sh \
+     --repo /path/to/target-repo \
+     --start-from 08-review-comments.md
+   ```
+
+## Governance rules baked into this package
+
+- Automated steps pass context forward via recorded step summaries, not implicit chat state.
+- Durable outputs are written into canonical `.sdlc/artifacts/` and `.sdlc/reports/` paths.
+- Manual steps are not silently skipped; they are excluded by default and called out explicitly at the end of the run.
+- The runner is macOS-friendly and does not assume GNU `timeout` exists.
+- Repository-specific files such as `AGENTS.md` and `Contributing.md` are used when present; the package still works if they are absent.
+
+## Extending the pipeline
+
+Use [`templates/step-template.md`](templates/step-template.md) for new steps. Keep them:
+
+- Single-purpose
+- Explicit about inputs and output paths
+- Verifiable through concrete commands
+- Durable when later steps depend on their output

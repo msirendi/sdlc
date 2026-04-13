@@ -9,6 +9,7 @@
 - Single Linear issue for the work (e.g. `AI-441`)
 - Passing or currently understood validation state
 - Summary of implemented behavior and tests
+- Canonical PR body file: `.sdlc/artifacts/pr-body.md`
 
 ## Prerequisites
 
@@ -27,9 +28,9 @@
    - The diff stays within repository limits: 25 files changed, 800 total lines changed, and 400 changed lines in any single file.
    - If those limits are exceeded, split the work into stacked or separate PRs unless a maintainer has approved an exception.
 
-3. **Open the PR** via the GitHub CLI or web UI:
+3. **Draft the PR body** into `.sdlc/artifacts/pr-body.md`, then **open the PR** via the GitHub CLI or web UI:
    ```
-   gh pr create --base main --head marek/my-fix-branch --title "<type>(<scope>): <subject>" --body-file <pr-body.md>
+   gh pr create --base main --head marek/my-fix-branch --title "<type>(<scope>): <subject>" --body-file .sdlc/artifacts/pr-body.md
    ```
 
 4. **PR title format:**
@@ -76,6 +77,7 @@
 ## Outputs
 
 - Open pull request for the feature branch
+- Durable PR description at `.sdlc/artifacts/pr-body.md`
 
 ## Guardrails
 
@@ -88,6 +90,7 @@
 ## Completion criteria
 
 - PR is open on GitHub with a complete title and body.
+- `.sdlc/artifacts/pr-body.md` exists and matches the PR body.
 - The PR title follows the repository commit message conventions.
 - The PR body links the single Linear issue with a supported closing keyword.
 - The diff contains only in-scope changes.

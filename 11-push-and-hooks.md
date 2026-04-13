@@ -16,6 +16,7 @@
 ## Procedure
 
 1. **Stage and commit** any remaining uncommitted work. Ensure each commit message follows `Contributing.md`: header only, `<type>(<scope>): <subject>` or `<type>: <subject>`, valid type, imperative lowercase subject, no trailing period, 100 characters max.
+   - If the repository does not have `Contributing.md`, use the commit-title rules defined in this SDLC package.
 
 2. **Install hooks locally if they are missing:**
    ```

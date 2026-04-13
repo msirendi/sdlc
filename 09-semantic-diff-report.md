@@ -8,6 +8,7 @@
 - Current feature branch diff against `main`
 - Full changed file set
 - Repository context needed to understand intent
+- Canonical output directory: `.sdlc/reports/`
 
 ## Prerequisites
 
@@ -81,7 +82,7 @@ Render the output as a self-contained HTML report that mimics the readability of
 
 ## Output
 
-Write the result to: `semantic_diff_report_<ticket-id>.html`
+Write the result to: `.sdlc/reports/semantic_diff_report_<ticket-id>.html`
 
 ## Guardrails
 
@@ -92,4 +93,4 @@ Write the result to: `semantic_diff_report_<ticket-id>.html`
 
 ## Completion criteria
 
-- `semantic_diff_report_<ticket-id>.html` exists and provides a structured, reviewer-usable semantic explanation of the branch diff against `main`.
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` exists and provides a structured, reviewer-usable semantic explanation of the branch diff against `main`.

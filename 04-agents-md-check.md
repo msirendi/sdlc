@@ -6,22 +6,23 @@
 ## Inputs
 
 - Current implementation on the feature branch
-- Repository file `AGENTS.md`
+- Repository file `AGENTS.md`, if present
 
 ## Prerequisites
 
 - Code changes from the technical spec have been implemented (Step 3).
-- `AGENTS.md` is present and readable.
+- If `AGENTS.md` exists, it is readable.
 
 ## Procedure
 
-1. **Read `AGENTS.md` in full.** Do not skim. Pay attention to:
+1. **Read `AGENTS.md` in full if it exists.** Do not skim. Pay attention to:
    - Required file/folder structure and naming conventions.
    - Mandated patterns (e.g., error handling, logging, dependency injection, config access).
    - Prohibited patterns or anti-patterns explicitly called out.
    - Testing requirements (coverage thresholds, required test types, naming conventions).
    - Documentation requirements (docstrings, inline comments, ADRs).
    - Any style, linting, or formatting mandates beyond what the linter enforces automatically.
+   - If `AGENTS.md` does not exist, explicitly note that the repository has no additional agent-specific instructions and continue.
 
 2. **Diff your changes against the rules.** For every file you touched:
    - Verify naming (files, functions, variables, classes, DB columns) matches the stated conventions.
@@ -52,5 +53,5 @@
 
 ## Completion criteria
 
-- Zero known violations of `AGENTS.md` remain in the changed files.
+- Zero known violations of `AGENTS.md` remain in the changed files, or the absence of `AGENTS.md` has been documented.
 - Any intentional deviations are documented with rationale.
