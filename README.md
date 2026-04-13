@@ -93,6 +93,34 @@ Prerequisites:
    sdlc --start-from 08-review-comments.md
    ```
 
+## Checking run status
+
+Use the status command from anywhere inside a governed repository to inspect the
+latest pipeline run without browsing `.sdlc/logs/` manually:
+
+```bash
+bash "$SDLC_HOME/orchestrator/status.sh"
+```
+
+The summary reports the latest run ID, repository name, per-step outcome,
+elapsed time, and the log directory path. Step states are shown as:
+
+- `✓ completed`: the step finished successfully
+- `✗ failed`: the pipeline halted at that step
+- `– skipped`: the step was planned for the run but did not complete
+
+If your shell does not already expose a helper, add one like this:
+
+```bash
+sdlc-status() {
+  SDLC_HOME="${SDLC_HOME:-/path/to/sdlc}" \
+    bash "$SDLC_HOME/orchestrator/status.sh"
+}
+```
+
+When no prior runs exist for the current repository, the command prints
+`No pipeline runs found.` and exits successfully.
+
 ## Governance rules baked into this package
 
 - Automated steps pass context forward via recorded step summaries, not implicit chat state.
