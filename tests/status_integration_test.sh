@@ -9,7 +9,6 @@ test_status_command_failed_run_marks_failed_and_skipped_steps() {
   local repo_dir=""
   local run_dir=""
   local expected_logs_path=""
-
   use_temp_dir
   repo_dir="$TEST_TEMP_DIR/repo"
 
@@ -40,7 +39,6 @@ test_status_command_from_nested_directory_uses_repo_root_and_manifest_fallback_n
   local nested_dir=""
   local run_dir=""
   local expected_logs_path=""
-
   use_temp_dir
   repo_dir="$TEST_TEMP_DIR/example-repo"
   nested_dir="$repo_dir/src/nested"
@@ -68,7 +66,6 @@ test_status_command_from_nested_directory_uses_repo_root_and_manifest_fallback_n
 test_status_command_incomplete_run_reports_unavailable_elapsed() {
   local repo_dir=""
   local run_dir=""
-
   use_temp_dir
   repo_dir="$TEST_TEMP_DIR/repo"
 
@@ -92,7 +89,6 @@ test_status_command_missing_manifest_in_latest_run_exits_nonzero() {
   local repo_dir=""
   local older_run_dir=""
   local latest_run_dir=""
-
   use_temp_dir
   repo_dir="$TEST_TEMP_DIR/repo"
 
@@ -111,7 +107,6 @@ test_status_command_missing_manifest_in_latest_run_exits_nonzero() {
 
 test_status_command_no_runs_found_exits_zero() {
   local repo_dir=""
-
   use_temp_dir
   repo_dir="$TEST_TEMP_DIR/repo"
 
@@ -135,7 +130,6 @@ test_status_command_successful_run_prints_summary() {
   local repo_dir=""
   local run_dir=""
   local expected_logs_path=""
-
   use_temp_dir
   repo_dir="$TEST_TEMP_DIR/repo"
 

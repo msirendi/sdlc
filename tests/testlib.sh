@@ -28,7 +28,6 @@ assert_equals() {
   local expected="$1"
   local actual="$2"
   local message="${3:-Expected values to match.}"
-
   if [[ "$expected" != "$actual" ]]; then
     fail "$message Expected [$expected], got [$actual]."
   fi
@@ -38,7 +37,6 @@ assert_contains() {
   local haystack="$1"
   local needle="$2"
   local message="${3:-Expected output to contain substring.}"
-
   if [[ "$haystack" != *"$needle"* ]]; then
     fail "$message Missing [$needle] in [$haystack]."
   fi
@@ -48,7 +46,6 @@ assert_not_contains() {
   local haystack="$1"
   local needle="$2"
   local message="${3:-Expected output to omit substring.}"
-
   if [[ "$haystack" == *"$needle"* ]]; then
     fail "$message Found unexpected [$needle] in [$haystack]."
   fi
@@ -58,7 +55,6 @@ assert_exit_code() {
   local expected="$1"
   local actual="$2"
   local message="${3:-Unexpected exit code.}"
-
   if [[ "$expected" -ne "$actual" ]]; then
     fail "$message Expected [$expected], got [$actual]."
   fi

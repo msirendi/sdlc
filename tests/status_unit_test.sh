@@ -21,7 +21,6 @@ test_array_contains_returns_success_for_present_value() {
 
 test_find_latest_run_dir_returns_failure_when_logs_dir_missing() {
   use_temp_dir
-
   if find_latest_run_dir "$TEST_TEMP_DIR/does-not-exist" >/dev/null 2>&1; then
     fail "Expected find_latest_run_dir to fail when the logs directory is absent."
   fi
@@ -46,25 +45,19 @@ test_find_latest_run_dir_returns_newest_lexical_entry() {
 
 test_format_duration_formats_hours_minutes_and_seconds() {
   local formatted=""
-
   formatted=$(format_duration 3661)
-
   assert_equals "1h 1m 1s" "$formatted" "Expected hour-level durations to include hours, minutes, and seconds."
 }
 
 test_format_duration_formats_minutes_and_seconds() {
   local formatted=""
-
   formatted=$(format_duration 61)
-
   assert_equals "1m 1s" "$formatted" "Expected minute-level durations to include minutes and seconds."
 }
 
 test_format_duration_formats_zero_seconds() {
   local formatted=""
-
   formatted=$(format_duration 0)
-
   assert_equals "0s" "$formatted" "Expected zero seconds to render as 0s."
 }
 
@@ -97,7 +90,6 @@ test_parse_manifest_extracts_repo_path_and_planned_steps_only() {
 test_parse_manifest_returns_empty_steps_when_section_is_missing() {
   local manifest_file=""
   local actual_steps=""
-
   use_temp_dir
   manifest_file="$TEST_TEMP_DIR/pipeline-manifest.md"
 
@@ -119,7 +111,6 @@ test_parse_orchestrator_log_collects_completed_failed_and_elapsed_data() {
   local log_file=""
   local actual_completed=""
   local expected_completed=""
-
   use_temp_dir
   log_file="$TEST_TEMP_DIR/orchestrator.log"
 
@@ -146,7 +137,6 @@ EOF
 test_parse_orchestrator_log_leaves_elapsed_unset_for_incomplete_runs() {
   local log_file=""
   local actual_completed=""
-
   use_temp_dir
   log_file="$TEST_TEMP_DIR/orchestrator.log"
 
