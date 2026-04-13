@@ -53,6 +53,8 @@ Created or ensured:
 Next:
 1. Fill in .sdlc/task.md for the feature.
 2. Review .sdlc/overrides.sh and trim any overrides you do not need.
-3. Run the pipeline from the repo:
+3. From that repo, preview the pipeline:
+   sdlc-dry
+4. If your shell helpers are not loaded yet, use the full-path fallback:
    SDLC_HOME="$SDLC_HOME" "$SDLC_HOME/orchestrator/run-pipeline.sh" --dry-run
 EOF

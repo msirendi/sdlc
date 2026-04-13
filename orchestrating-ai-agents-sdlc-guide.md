@@ -21,7 +21,7 @@ This repository is the SDLC package. It can be kept anywhere on disk and used to
 ### Implemented files
 
 - [`orchestrator/run-pipeline.sh`](orchestrator/run-pipeline.sh): runs the automated steps in sequence
-- [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh): bootstraps `.sdlc/` in a target repo
+- [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh): initializes `.sdlc/` in an existing target repo
 - [`orchestrator/config.sh`](orchestrator/config.sh): defaults for model, retries, timeouts, and required artifacts
 - [`orchestrator/lib/`](orchestrator/lib): execution, validation, context, notification, and common helpers
 - [`templates/task-template.md`](templates/task-template.md): seed feature brief
@@ -93,7 +93,7 @@ The runner skips the two manual steps by default and calls them out explicitly a
 
 ## How the orchestration works
 
-1. Bootstrap the target repo with `init-target-repo.sh`.
+1. Initialize `.sdlc/` inside the existing target repo with `sdlc-init`.
 2. Write the feature brief in `.sdlc/task.md`.
 3. Run `run-pipeline.sh` from this package against the target repo.
 4. The runner reads each step file, injects task context plus summaries from earlier steps, and invokes Codex.
@@ -115,36 +115,31 @@ The step library now has explicit durable outputs where automation needs them:
 
 ## Recommended usage
 
-### Bootstrap a target repository
+### Initialize an existing repo for a new task
 
 ```bash
-/path/to/this/repo/orchestrator/init-target-repo.sh /path/to/target-repo
+cd /path/to/existing-repo
+sdlc-init
 ```
+
+This does not create a new repository. It adds the `.sdlc/` task, artifact, report, and log structure to the repo you already have.
 
 ### Dry-run the full automated SDLC
 
 ```bash
-SDLC_HOME=/path/to/this/repo \
-  /path/to/this/repo/orchestrator/run-pipeline.sh \
-  --repo /path/to/target-repo \
-  --dry-run
+sdlc-dry
 ```
 
 ### Run the automated SDLC
 
 ```bash
-SDLC_HOME=/path/to/this/repo \
-  /path/to/this/repo/orchestrator/run-pipeline.sh \
-  --repo /path/to/target-repo
+sdlc
 ```
 
 ### Resume a later step
 
 ```bash
-SDLC_HOME=/path/to/this/repo \
-  /path/to/this/repo/orchestrator/run-pipeline.sh \
-  --repo /path/to/target-repo \
-  --start-from 08-review-comments.md
+sdlc --start-from 08-review-comments.md
 ```
 
 ## Extending the package
@@ -158,4 +153,4 @@ If you add steps or tighten outputs:
 
 ## Bottom line
 
-This repo can now be used as the governing SDLC package for feature implementation. The instructions are no longer only descriptive; they are wired into a runner, a bootstrap flow, and a durable artifact model that carries state across the full delivery lifecycle.
+This repo can now be used as the governing SDLC package for feature implementation. The instructions are no longer only descriptive; they are wired into a runner, an existing-repo initialization flow, and a durable artifact model that carries state across the full delivery lifecycle.

@@ -4,7 +4,7 @@ This repository is now a runnable SDLC package, not just a set of markdown promp
 
 - A 15-step feature delivery process expressed as explicit step files.
 - A Codex-based orchestrator that runs the automated steps in order.
-- Repo bootstrap and artifact templates so later steps can consume durable outputs.
+- Repo-initialization helpers and artifact templates so later steps can consume durable outputs.
 - Manual closeout checklists for merge and cleanup.
 
 ## What this governs
@@ -35,7 +35,7 @@ Steps `01` through `13` are automated. Steps `14` and `15` are manual by default
 | --- | --- |
 | `01-branch-setup.md` ... `15-cleanup.md` | The canonical SDLC step instructions |
 | [`orchestrator/run-pipeline.sh`](orchestrator/run-pipeline.sh) | Main runner for automated steps |
-| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Bootstraps `.sdlc/` inside a target repo |
+| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Initializes `.sdlc/` inside an existing target repo |
 | [`orchestrator/config.sh`](orchestrator/config.sh) | Default model, timeout, retry, and artifact rules |
 | [`orchestrator/lib/`](orchestrator/lib) | Execution, validation, context, and notification helpers |
 | [`templates/`](templates) | Task, spec, PR-body, override, and step templates |
@@ -53,7 +53,7 @@ Each governed repository should contain a tracked `.sdlc/` directory with:
 - `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 9
 - `.sdlc/logs/`: run logs, summaries, and rolling pipeline context; gitignored
 
-The bootstrap script creates the directories and seed files for you.
+The init script creates the directories and seed files inside an existing repository for you.
 
 ## Quick start
 
@@ -64,38 +64,33 @@ Prerequisites:
 - A git repository to govern
 - Any repo-specific access needed by the steps, such as GitHub or Linear
 
-1. Bootstrap a target repository:
+1. In the existing repo you want to work on, initialize SDLC support once:
 
    ```bash
-   /path/to/this/repo/orchestrator/init-target-repo.sh /path/to/target-repo
+   cd /path/to/existing-repo
+   sdlc-init
    ```
 
-2. Fill in `/path/to/target-repo/.sdlc/task.md`.
+   This does not create a new repository. It just adds `.sdlc/` scaffolding to the repo you are already in.
+
+2. Fill in `.sdlc/task.md` for the new task.
 
 3. Preview the run:
 
    ```bash
-   SDLC_HOME=/path/to/this/repo \
-     /path/to/this/repo/orchestrator/run-pipeline.sh \
-     --repo /path/to/target-repo \
-     --dry-run
+   sdlc-dry
    ```
 
 4. Run the automated SDLC:
 
    ```bash
-   SDLC_HOME=/path/to/this/repo \
-     /path/to/this/repo/orchestrator/run-pipeline.sh \
-     --repo /path/to/target-repo
+   sdlc
    ```
 
 5. Resume or target a single step as needed:
 
    ```bash
-   SDLC_HOME=/path/to/this/repo \
-     /path/to/this/repo/orchestrator/run-pipeline.sh \
-     --repo /path/to/target-repo \
-     --start-from 08-review-comments.md
+   sdlc --start-from 08-review-comments.md
    ```
 
 ## Governance rules baked into this package
