@@ -131,77 +131,91 @@ format_duration() {
   printf '%ds\n' "$seconds"
 }
 
-sdlc_require_command "git" "Install git and retry."
+main() {
+  local repo_root=""
+  local logs_dir=""
+  local latest_run_dir=""
+  local run_id=""
+  local manifest_file=""
+  local orchestrator_log=""
+  local step_name=""
 
-if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  status_error "$PWD is not inside a git repository."
-fi
+  sdlc_require_command "git" "Install git and retry."
 
-REPO_ROOT=$(git rev-parse --show-toplevel)
-LOGS_DIR="$REPO_ROOT/$LOGS_DIR_REL"
-
-if ! LATEST_RUN_DIR=$(find_latest_run_dir "$LOGS_DIR"); then
-  printf 'No pipeline runs found.\n'
-  exit 0
-fi
-
-RUN_ID=$(basename "$LATEST_RUN_DIR")
-MANIFEST_FILE="$LATEST_RUN_DIR/pipeline-manifest.md"
-ORCHESTRATOR_LOG="$LATEST_RUN_DIR/orchestrator.log"
-
-if [[ ! -f "$MANIFEST_FILE" ]]; then
-  status_error "Latest run $RUN_ID is missing $MANIFEST_FILE."
-fi
-
-if [[ ! -f "$ORCHESTRATOR_LOG" ]]; then
-  status_error "Latest run $RUN_ID is missing $ORCHESTRATOR_LOG."
-fi
-
-PLANNED_STEPS=()
-COMPLETED_STEPS=()
-FAILED_STEP=""
-ELAPSED_SECONDS=""
-REPO_NAME=""
-MANIFEST_REPO_PATH=""
-
-parse_manifest "$MANIFEST_FILE"
-parse_orchestrator_log "$ORCHESTRATOR_LOG"
-
-if [[ ${#PLANNED_STEPS[@]} -eq 0 ]]; then
-  status_error "Latest run $RUN_ID does not list any planned steps in $MANIFEST_FILE."
-fi
-
-if [[ -z "$REPO_NAME" && -n "$MANIFEST_REPO_PATH" ]]; then
-  REPO_NAME=$(basename "$MANIFEST_REPO_PATH")
-fi
-
-if [[ -z "$REPO_NAME" ]]; then
-  REPO_NAME=$(basename "$REPO_ROOT")
-fi
-
-printf 'Run ID: %s\n' "$RUN_ID"
-printf 'Repository: %s\n' "$REPO_NAME"
-printf 'Steps:\n'
-
-for step_name in "${PLANNED_STEPS[@]}"; do
-  if [[ -n "$FAILED_STEP" && "$step_name" == "$FAILED_STEP" ]]; then
-    printf '  ✗ failed %s\n' "$step_name"
-    continue
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    status_error "$PWD is not inside a git repository."
   fi
 
-  if array_contains "$step_name" "${COMPLETED_STEPS[@]}"; then
-    printf '  ✓ completed %s\n' "$step_name"
-    continue
+  repo_root=$(git rev-parse --show-toplevel)
+  logs_dir="$repo_root/$LOGS_DIR_REL"
+
+  if ! latest_run_dir=$(find_latest_run_dir "$logs_dir"); then
+    printf 'No pipeline runs found.\n'
+    exit 0
   fi
 
-  printf '  – skipped %s\n' "$step_name"
-done
+  run_id=$(basename "$latest_run_dir")
+  manifest_file="$latest_run_dir/pipeline-manifest.md"
+  orchestrator_log="$latest_run_dir/orchestrator.log"
 
-if [[ -n "$ELAPSED_SECONDS" ]]; then
-  printf 'Elapsed: %s\n' "$(format_duration "$ELAPSED_SECONDS")"
-else
-  printf 'Elapsed: unavailable\n'
-  printf 'Note: the latest run may still be in progress or was interrupted.\n'
+  if [[ ! -f "$manifest_file" ]]; then
+    status_error "Latest run $run_id is missing $manifest_file."
+  fi
+
+  if [[ ! -f "$orchestrator_log" ]]; then
+    status_error "Latest run $run_id is missing $orchestrator_log."
+  fi
+
+  PLANNED_STEPS=()
+  COMPLETED_STEPS=()
+  FAILED_STEP=""
+  ELAPSED_SECONDS=""
+  REPO_NAME=""
+  MANIFEST_REPO_PATH=""
+
+  parse_manifest "$manifest_file"
+  parse_orchestrator_log "$orchestrator_log"
+
+  if [[ ${#PLANNED_STEPS[@]} -eq 0 ]]; then
+    status_error "Latest run $run_id does not list any planned steps in $manifest_file."
+  fi
+
+  if [[ -z "$REPO_NAME" && -n "$MANIFEST_REPO_PATH" ]]; then
+    REPO_NAME=$(basename "$MANIFEST_REPO_PATH")
+  fi
+
+  if [[ -z "$REPO_NAME" ]]; then
+    REPO_NAME=$(basename "$repo_root")
+  fi
+
+  printf 'Run ID: %s\n' "$run_id"
+  printf 'Repository: %s\n' "$REPO_NAME"
+  printf 'Steps:\n'
+
+  for step_name in "${PLANNED_STEPS[@]}"; do
+    if [[ -n "$FAILED_STEP" && "$step_name" == "$FAILED_STEP" ]]; then
+      printf '  ✗ failed %s\n' "$step_name"
+      continue
+    fi
+
+    if array_contains "$step_name" "${COMPLETED_STEPS[@]}"; then
+      printf '  ✓ completed %s\n' "$step_name"
+      continue
+    fi
+
+    printf '  – skipped %s\n' "$step_name"
+  done
+
+  if [[ -n "$ELAPSED_SECONDS" ]]; then
+    printf 'Elapsed: %s\n' "$(format_duration "$ELAPSED_SECONDS")"
+  else
+    printf 'Elapsed: unavailable\n'
+    printf 'Note: the latest run may still be in progress or was interrupted.\n'
+  fi
+
+  printf 'Logs: %s\n' "$latest_run_dir"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+  main "$@"
 fi
-
-printf 'Logs: %s\n' "$LATEST_RUN_DIR"
