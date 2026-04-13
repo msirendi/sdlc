@@ -6,6 +6,8 @@ REPO_ROOT="$(cd "$TESTS_DIR/.." && pwd)"
 # shellcheck disable=SC2034
 STATUS_SCRIPT="$REPO_ROOT/orchestrator/status.sh"
 
+# Keep these helpers repo-local so the Bash-only orchestrator can be tested on the
+# same baseline shell/runtime it targets, without adding a separate test framework.
 # shellcheck disable=SC2034
 CHECK_MARK=$'\342\234\223'
 # shellcheck disable=SC2034
@@ -71,6 +73,7 @@ join_lines() {
 join_array() {
   local array_name="$1"
 
+  # Bash 3.2 lacks namerefs, so tests pass the small set of known array names here.
   eval "set -- \"\${${array_name}[@]+\"\${${array_name}[@]}\"}\""
   join_lines "$@"
 }
