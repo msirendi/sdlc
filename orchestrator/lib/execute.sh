@@ -90,8 +90,8 @@ EOF
       -C "$repo_root" \
       -m "$CODEX_MODEL" \
       -c "model_reasoning_effort=\"$CODEX_REASONING\"" \
-      "${sandbox_args[@]}" \
-      "${codex_args[@]}" \
+      ${sandbox_args[@]+"${sandbox_args[@]}"} \
+      ${codex_args[@]+"${codex_args[@]}"} \
       --output-last-message "$summary_file" \
       - 2>&1 | tee "$log_file"
   local -a pipe_status=("${PIPESTATUS[@]}")

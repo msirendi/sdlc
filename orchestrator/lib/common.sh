@@ -47,7 +47,7 @@ sdlc_lookup_kv() {
   local value="$default_value"
   local entry
 
-  eval "set -- \"\${${array_name}[@]}\""
+  eval "set -- \"\${${array_name}[@]+\"\${${array_name}[@]}\"}\""
   for entry in "$@"; do
     case "$entry" in
       "$key="*)
