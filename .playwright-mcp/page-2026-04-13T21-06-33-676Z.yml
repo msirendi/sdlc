@@ -1,0 +1,346 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]: Semantic Diff Report
+    - 'heading "SDLC-1: sdlc-status branch review" [level=1] [ref=e5]':
+      - text: "SDLC-1:"
+      - code [ref=e6]: sdlc-status
+      - text: branch review
+    - paragraph [ref=e7]: "This branch is tightly aligned to the ticket: it introduces a Bash-only status command that summarizes the latest pipeline run, documents the operator workflow, and adds a bespoke shell test surface to lock the behavior down. The main review pressure points are parser coupling to human-readable log text, the decision to fail on a malformed newest run instead of falling back, and whether the new custom test harness is a precedent the repository wants to keep expanding."
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - text: "Compare:"
+        - code [ref=e10]: main...sdlc-1/sdlc-status
+      - generic [ref=e11]: "Diff size: 6 files, 791 insertions"
+      - generic [ref=e12]:
+        - text: "Production files:"
+        - code [ref=e13]: README.md
+        - text: ","
+        - code [ref=e14]: orchestrator/status.sh
+      - generic [ref=e15]: "Support files: 4 Bash test files"
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - generic [ref=e18]:
+        - 'heading "Block 1: Implement a repo-aware latest-run summarizer" [level=2] [ref=e19]'
+        - generic [ref=e21]: orchestrator/status.sh
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - heading "Objective" [level=3] [ref=e24]
+          - paragraph [ref=e25]:
+            - text: Expose the last pipeline run as a concise, human-readable status summary without forcing operators to inspect
+            - code [ref=e26]: .sdlc/logs/
+            - text: manually.
+          - heading "Why This Change Exists" [level=3] [ref=e27]
+          - paragraph [ref=e28]: "The ticket’s core requirement is operational visibility: the pipeline already emits a manifest and orchestrator log, but there was no lightweight reader for them. This block turns those artifacts into a stable operator command while staying inside the repo’s Bash-only, no-extra-runtime constraints."
+          - heading "Justification Audit" [level=3] [ref=e29]
+          - generic [ref=e30]:
+            - generic [ref=e31]:
+              - generic [ref=e32]: Strongly justified
+              - text: Sourcing
+              - code [ref=e33]: config.sh
+              - text: and
+              - code [ref=e34]: lib/common.sh
+              - text: ", reusing"
+              - code [ref=e35]: sdlc_log
+              - text: ", and resolving the repository with"
+              - code [ref=e36]: git rev-parse --show-toplevel
+              - text: all directly support the stated requirement to run from any directory inside the target repo while matching existing orchestrator conventions.
+            - generic [ref=e37]:
+              - generic [ref=e38]: Strongly justified
+              - code [ref=e39]: find_latest_run_dir
+              - text: selects the lexically newest child directory under
+              - code [ref=e40]: .sdlc/logs/
+              - text: ", which matches the pipeline’s timestamp-based run IDs and avoids any need for external tools."
+            - generic [ref=e41]:
+              - generic [ref=e42]: Strongly justified
+              - code [ref=e43]: parse_manifest
+              - text: uses the manifest as the source of truth for planned-step order and repository path. That is the correct artifact to preserve the intended step list, especially when some planned steps never completed.
+            - generic [ref=e44]:
+              - generic [ref=e45]: Probably justified
+              - code [ref=e46]: parse_orchestrator_log
+              - text: scrapes exact human-readable phrases such as
+              - code [ref=e47]: "Repository:"
+              - text: ","
+              - code [ref=e48]: Completed
+              - text: ","
+              - code [ref=e49]: Pipeline halted at
+              - text: ", and"
+              - code [ref=e50]: Run complete
+              - text: ". This is valid against today’s producer, but it creates a brittle coupling: wording changes in"
+              - code [ref=e51]: run-pipeline.sh
+              - text: will break status parsing even if the pipeline still works.
+            - generic [ref=e52]:
+              - generic [ref=e53]: Strongly justified
+              - text: The summary renderer maps planned steps to
+              - code [ref=e54]: ✓ completed
+              - text: ","
+              - code [ref=e55]: ✗ failed
+              - text: ", and"
+              - code [ref=e56]: – skipped
+              - text: ", humanizes elapsed seconds, and prints the log directory. Those are exactly the user-facing fields requested by the ticket."
+            - generic [ref=e57]:
+              - generic [ref=e58]: Probably justified
+              - text: Treating a malformed newest run as a hard error is defensible because it avoids silently reporting stale information from an older run. It is still a policy choice rather than an explicit requirement, so the reviewer should confirm that “latest run is corrupt” is intended to be fatal.
+            - generic [ref=e59]:
+              - generic [ref=e60]: Probably justified
+              - text: The
+              - code [ref=e61]: main
+              - text: guard is not operator-visible, but it is coherent with the later test additions because it allows the helper functions to be sourced safely without changing CLI behavior.
+          - heading "Behavioral Impact" [level=3] [ref=e62]
+          - list [ref=e63]:
+            - listitem [ref=e64]:
+              - text: "Introduces a new command path:"
+              - code [ref=e65]: bash orchestrator/status.sh
+              - text: .
+            - listitem [ref=e66]: Works from nested directories inside a governed repository because it re-roots via Git.
+            - listitem [ref=e67]: Reports no runs as a successful, non-error condition.
+            - listitem [ref=e68]: Marks incomplete or interrupted runs by leaving elapsed time unavailable and leaving remaining planned steps skipped.
+            - listitem [ref=e69]: Fails fast if the newest run directory is missing required artifacts.
+          - heading "Reviewer Scrutiny" [level=3] [ref=e70]
+          - list [ref=e71]:
+            - listitem [ref=e72]:
+              - text: Confirm that
+              - code [ref=e73]: run-pipeline.sh
+              - text: log text is a stable contract, or accept that
+              - code [ref=e74]: status.sh
+              - text: must be updated alongside any wording change.
+            - listitem [ref=e75]: Verify whether dry-run output should be treated as “unavailable / interrupted” or deserves a dedicated dry-run status instead.
+            - listitem [ref=e76]: Decide whether the command should fall back to the newest valid run when the newest directory is corrupt.
+            - listitem [ref=e77]:
+              - text: Verify that
+              - code [ref=e78]: .sdlc/logs/
+              - text: will only contain sortable run directories and no stray folders that could sort after a timestamp.
+        - generic [ref=e79]:
+          - generic [ref=e80]:
+            - generic [ref=e81]: Relevant new code
+            - generic [ref=e82]: new code only
+          - generic [ref=e83]:
+            - generic [ref=e84]: orchestrator/status.sh
+            - code [ref=e86]: "repo_root=$(git rev-parse --show-toplevel) logs_dir=\"$repo_root/$LOGS_DIR_REL\" if ! latest_run_dir=$(find_latest_run_dir \"$logs_dir\"); then printf 'No pipeline runs found.\\n' exit 0 fi manifest_file=\"$latest_run_dir/pipeline-manifest.md\" orchestrator_log=\"$latest_run_dir/orchestrator.log\" parse_manifest \"$manifest_file\" parse_orchestrator_log \"$orchestrator_log\" for step_name in \"${PLANNED_STEPS[@]}\"; do if [[ -n \"$FAILED_STEP\" && \"$step_name\" == \"$FAILED_STEP\" ]]; then printf ' ✗ failed %s\\n' \"$step_name\" continue fi if array_contains \"$step_name\" \"${COMPLETED_STEPS[@]}\"; then printf ' ✓ completed %s\\n' \"$step_name\" continue fi printf ' – skipped %s\\n' \"$step_name\" done if [[ -n \"$ELAPSED_SECONDS\" ]]; then printf 'Elapsed: %s\\n' \"$(format_duration \"$ELAPSED_SECONDS\")\" else printf 'Elapsed: unavailable\\n' printf 'Note: the latest run may still be in progress or was interrupted.\\n' fi"
+    - generic [ref=e87]:
+      - generic [ref=e88]:
+        - 'heading "Block 2: Expose the operator workflow in the README" [level=2] [ref=e89]'
+        - generic [ref=e91]: README.md
+      - generic [ref=e92]:
+        - generic [ref=e93]:
+          - heading "Objective" [level=3] [ref=e94]
+          - paragraph [ref=e95]: Make the new status command discoverable and usable without requiring readers to infer invocation details from the implementation.
+          - heading "Why This Change Exists" [level=3] [ref=e96]
+          - paragraph [ref=e97]: The ticket explicitly requires documentation and a shell-function example. Without this block, the new script would exist but remain hidden behind internal directory knowledge and installation assumptions.
+          - heading "Justification Audit" [level=3] [ref=e98]
+          - generic [ref=e99]:
+            - generic [ref=e100]:
+              - generic [ref=e101]: Strongly justified
+              - text: The new
+              - code [ref=e102]: Checking run status
+              - text: section introduces the command in the exact place operators already look for usage patterns.
+            - generic [ref=e103]:
+              - generic [ref=e104]: Strongly justified
+              - text: The symbol legend for
+              - code [ref=e105]: ✓
+              - text: ","
+              - code [ref=e106]: ✗
+              - text: ", and"
+              - code [ref=e107]: –
+              - text: matters because the script compresses state into short status lines; the legend removes ambiguity at first use.
+            - generic [ref=e108]:
+              - generic [ref=e109]: Strongly justified
+              - text: The
+              - code [ref=e110]: sdlc-status
+              - text: shell function example directly addresses the requirement to show users how to wire the command into their shell.
+            - generic [ref=e111]:
+              - generic [ref=e112]: Strongly justified
+              - text: Documenting the
+              - code [ref=e113]: No pipeline runs found.
+              - text: success path captures a user-visible contract that could otherwise look like a no-op or failure.
+          - heading "Behavioral Impact" [level=3] [ref=e114]
+          - list [ref=e115]:
+            - listitem [ref=e116]: No runtime or API behavior changes.
+            - listitem [ref=e117]: Reduces adoption friction by making the command, symbols, and happy-path wiring explicit.
+          - heading "Reviewer Scrutiny" [level=3] [ref=e118]
+          - list [ref=e119]:
+            - listitem [ref=e120]:
+              - text: Verify the README’s
+              - code [ref=e121]: SDLC_HOME
+              - text: example matches the project’s expected installation layout.
+            - listitem [ref=e122]: Ensure the documented output contract stays in sync if the script wording changes later.
+        - generic [ref=e123]:
+          - generic [ref=e124]:
+            - generic [ref=e125]: Relevant new code
+            - generic [ref=e126]: new code only
+          - generic [ref=e127]:
+            - generic [ref=e128]: README.md
+            - code [ref=e130]: "## Checking run status Use the status command from anywhere inside a governed repository to inspect the latest pipeline run without browsing `.sdlc/logs/` manually: ```bash bash \"$SDLC_HOME/orchestrator/status.sh\" ``` The summary reports the latest run ID, repository name, per-step outcome, elapsed time, and the log directory path. Step states are shown as: - `✓ completed`: the step finished successfully - `✗ failed`: the pipeline halted at that step - `– skipped`: the step was planned for the run but did not complete ```bash sdlc-status() { SDLC_HOME=\"${SDLC_HOME:-/path/to/sdlc}\" \\ bash \"$SDLC_HOME/orchestrator/status.sh\" } ```"
+    - generic [ref=e131]:
+      - generic [ref=e132]:
+        - 'heading "Block 3: Add Bash-native test scaffolding without external frameworks" [level=2] [ref=e133]'
+        - generic [ref=e134]:
+          - generic [ref=e135]: orchestrator/status.sh
+          - generic [ref=e136]: tests/testlib.sh
+          - generic [ref=e137]: tests/run.sh
+      - generic [ref=e138]:
+        - generic [ref=e139]:
+          - heading "Objective" [level=3] [ref=e140]
+          - paragraph [ref=e141]: Make the new Bash feature testable in-repo with the same minimal runtime assumptions as the production scripts.
+          - heading "Why This Change Exists" [level=3] [ref=e142]
+          - paragraph [ref=e143]:
+            - text: The feature is implemented in Bash and the repo already validates shell scripts with
+            - code [ref=e144]: shellcheck
+            - text: . To get meaningful regression coverage without adding Bats or another dependency, this block builds a small native harness that can fabricate run artifacts and assert on the resulting command output.
+          - heading "Justification Audit" [level=3] [ref=e145]
+          - generic [ref=e146]:
+            - generic [ref=e147]:
+              - generic [ref=e148]: Strongly justified
+              - text: Guarding
+              - code [ref=e149]: main
+              - text: behind
+              - code [ref=e150]: "[[ \"${BASH_SOURCE[0]}\" == \"$0\" ]]"
+              - text: is the cleanest way to let tests source helper functions without changing the command-line behavior.
+            - generic [ref=e151]:
+              - generic [ref=e152]: Probably justified
+              - code [ref=e153]: tests/testlib.sh
+              - text: centralizes assertions, temp-directory lifecycle, fixture generation, path normalization, and captured command execution. That is coherent support code for a Bash-only repo.
+            - generic [ref=e154]:
+              - generic [ref=e155]: Probably justified
+              - text: The harness uses
+              - code [ref=e156]: eval
+              - text: inside
+              - code [ref=e157]: join_array
+              - text: to stay compatible with Bash 3.2, which lacks newer array conveniences. The use is safe here because the array names are hard-coded test inputs, but it is still a sharp tool.
+            - generic [ref=e158]:
+              - generic [ref=e159]: Strongly justified
+              - code [ref=e160]: tests/run.sh
+              - text: creates a single entrypoint for the status-related tests, which later pipeline steps can execute consistently.
+            - generic [ref=e161]:
+              - generic [ref=e162]: Unclear / possibly superfluous
+              - text: The bespoke test library is larger than the production script it supports. It is internally coherent, but reviewers should decide whether the repository wants to maintain custom shell-test infrastructure as a long-term pattern instead of eventually standardizing on an existing shell test tool.
+          - heading "Behavioral Impact" [level=3] [ref=e163]
+          - list [ref=e164]:
+            - listitem [ref=e165]:
+              - code [ref=e166]: orchestrator/status.sh
+              - text: becomes safe to source for unit testing.
+            - listitem [ref=e167]:
+              - text: The repository gains a dedicated Bash test entrypoint at
+              - code [ref=e168]: bash tests/run.sh
+              - text: .
+          - heading "Reviewer Scrutiny" [level=3] [ref=e169]
+          - list [ref=e170]:
+            - listitem [ref=e171]: Confirm the repo intentionally prefers homegrown shell test helpers over a standard framework.
+            - listitem [ref=e172]:
+              - text: Verify the
+              - code [ref=e173]: eval
+              - text: and
+              - code [ref=e174]: trap
+              - text: usage stays confined to tests.
+            - listitem [ref=e175]: Check Bash 3.2 compatibility, since that compatibility concern drove several harness design choices.
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - generic [ref=e178]: Relevant new code
+            - generic [ref=e179]: new code only
+          - generic [ref=e180]:
+            - generic [ref=e181]: orchestrator/status.sh
+            - code [ref=e183]: "if [[ \"${BASH_SOURCE[0]}\" == \"$0\" ]]; then main \"$@\" fi"
+          - generic [ref=e184]:
+            - generic [ref=e185]: tests/testlib.sh
+            - code [ref=e187]: "capture_command() { local workdir=\"$1\" shift set +e CAPTURED_OUTPUT=$(cd \"$workdir\" && \"$@\" 2>&1) CAPTURED_STATUS=$? set -e } write_manifest() { local run_dir=\"$1\" local repo_path=\"$2\" shift 2 { printf '# Pipeline Run Manifest\\n\\n' printf -- '- Repository: `%s`\\n' \"$repo_path\" printf '## Planned steps\\n' for step_name in \"$@\"; do printf -- '- `%s` (automated, timeout 1800s)\\n' \"$step_name\" done } > \"$run_dir/pipeline-manifest.md\" }"
+          - generic [ref=e188]:
+            - generic [ref=e189]: tests/run.sh
+            - code [ref=e191]: "TESTS_DIR=$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd) bash \"$TESTS_DIR/status_unit_test.sh\" bash \"$TESTS_DIR/status_integration_test.sh\""
+    - generic [ref=e192]:
+      - generic [ref=e193]:
+        - 'heading "Block 4: Lock in parser and CLI behavior across failure and edge cases" [level=2] [ref=e194]'
+        - generic [ref=e195]:
+          - generic [ref=e196]: tests/status_unit_test.sh
+          - generic [ref=e197]: tests/status_integration_test.sh
+      - generic [ref=e198]:
+        - generic [ref=e199]:
+          - heading "Objective" [level=3] [ref=e200]
+          - paragraph [ref=e201]: Encode the status contract so future changes to manifest structure, log wording, or output formatting break tests immediately instead of drifting silently.
+          - heading "Why This Change Exists" [level=3] [ref=e202]
+          - paragraph [ref=e203]: The new command is parser-heavy and therefore fragile in ways that pure happy-path manual testing will not catch. This block adds both helper-level tests and end-to-end fixtures so the feature can be changed deliberately instead of accidentally.
+          - heading "Justification Audit" [level=3] [ref=e204]
+          - generic [ref=e205]:
+            - generic [ref=e206]:
+              - generic [ref=e207]: Strongly justified
+              - text: Unit tests for
+              - code [ref=e208]: find_latest_run_dir
+              - text: ","
+              - code [ref=e209]: parse_manifest
+              - text: ","
+              - code [ref=e210]: parse_orchestrator_log
+              - text: ","
+              - code [ref=e211]: format_duration
+              - text: ", and"
+              - code [ref=e212]: array_contains
+              - text: isolate the parser and formatting behavior that is most likely to regress during later maintenance.
+            - generic [ref=e213]:
+              - generic [ref=e214]: Strongly justified
+              - text: "Integration tests cover the ticket’s required scenarios: no prior runs, successful run output, failed run output, nested-directory invocation, and elapsed-time rendering, plus incomplete-run behavior that naturally follows from the implementation."
+            - generic [ref=e215]:
+              - generic [ref=e216]: Probably justified
+              - text: The malformed-newest-run test documents the choice to fail rather than walk back to an older run. That behavior is not explicitly required by the ticket, but once chosen it is reasonable to pin down.
+            - generic [ref=e217]:
+              - generic [ref=e218]: Probably justified
+              - text: Testing the outside-git-repo failure path is slightly broader than the acceptance criteria, but it fits the implementation’s repo-root resolution contract and catches an important operator mistake.
+          - heading "Behavioral Impact" [level=3] [ref=e219]
+          - list [ref=e220]:
+            - listitem [ref=e221]: No production behavior changes; the impact is regression detection.
+            - listitem [ref=e222]: The branch now has explicit executable examples for the output contract and several edge conditions.
+          - heading "Reviewer Scrutiny" [level=3] [ref=e223]
+          - list [ref=e224]:
+            - listitem [ref=e225]: Request a dry-run fixture if dry runs are expected to be common; current coverage does not pin down that output.
+            - listitem [ref=e226]:
+              - text: Consider a test for non-run directories under
+              - code [ref=e227]: .sdlc/logs/
+              - text: and for a missing
+              - code [ref=e228]: orchestrator.log
+              - text: ", not just a missing manifest."
+            - listitem [ref=e229]: Consider coverage for runs that include manual steps, since the manifest parser currently treats planned steps generically.
+        - generic [ref=e230]:
+          - generic [ref=e231]:
+            - generic [ref=e232]: Relevant new code
+            - generic [ref=e233]: new code only
+          - generic [ref=e234]:
+            - generic [ref=e235]: tests/status_unit_test.sh
+            - code [ref=e237]: "test_parse_orchestrator_log_collects_completed_failed_and_elapsed_data() { local log_file=\"$TEST_TEMP_DIR/orchestrator.log\" cat <<'EOF' > \"$log_file\" [2026-04-13 14:25:31] [INFO] Repository: fixture-repo [2026-04-13 14:30:54] [INFO] Completed 03-implement.md [2026-04-13 14:24:14] [ERROR] Pipeline halted at 04-agents-md-check.md [2026-04-13 14:24:14] [INFO] Run complete: 2 succeeded, 1 failed, 287s elapsed. EOF parse_orchestrator_log \"$log_file\" assert_equals \"fixture-repo\" \"$REPO_NAME\" assert_equals \"04-agents-md-check.md\" \"$FAILED_STEP\" assert_equals \"287\" \"$ELAPSED_SECONDS\" }"
+          - generic [ref=e238]:
+            - generic [ref=e239]: tests/status_integration_test.sh
+            - code [ref=e241]: "test_status_command_failed_run_marks_failed_and_skipped_steps() { create_git_repo \"$repo_dir\" run_dir=$(create_run_dir \"$repo_dir\" \"20260413-142531\") write_manifest \"$run_dir\" \"$repo_dir\" \\ \"01-branch-setup.md\" \\ \"02-technical-spec.md\" \\ \"03-implement.md\" write_orchestrator_log \"$run_dir\" \"fixture-repo\" \"287\" \"02-technical-spec.md\" \\ \"01-branch-setup.md\" capture_command \"$repo_dir\" bash \"$STATUS_SCRIPT\" assert_contains \"$CAPTURED_OUTPUT\" \" ${CROSS_MARK} failed 02-technical-spec.md\" assert_contains \"$CAPTURED_OUTPUT\" \" ${SKIP_MARK} skipped 03-implement.md\" assert_contains \"$CAPTURED_OUTPUT\" \"Elapsed: 4m 47s\" }"
+    - generic [ref=e242]:
+      - heading "Overall Review Summary" [level=2] [ref=e243]
+      - generic [ref=e244]:
+        - generic [ref=e245]:
+          - heading "Overall PR Objective" [level=3] [ref=e246]
+          - paragraph [ref=e247]:
+            - text: Add an operator-facing
+            - code [ref=e248]: sdlc-status
+            - text: workflow that summarizes the most recent pipeline run from existing artifacts, document how to invoke it, and protect the behavior with native shell tests.
+        - generic [ref=e249]:
+          - heading "Potentially Superfluous Changes" [level=3] [ref=e250]
+          - paragraph [ref=e251]:
+            - text: No production edit looks obviously superfluous. The only arguable stretch is the size of
+            - code [ref=e252]: tests/testlib.sh
+            - text: ; it is coherent support code, but it establishes a custom shell-test framework that is larger than this feature alone requires.
+        - generic [ref=e253]:
+          - heading "Changes That Need Author Explanation" [level=3] [ref=e254]
+          - list [ref=e255]:
+            - listitem [ref=e256]: Is failing on the malformed newest run an intentional user contract, or should the command fall back to the newest valid run?
+            - listitem [ref=e257]: Should dry runs be reported distinctly rather than as “elapsed unavailable / possibly interrupted”?
+            - listitem [ref=e258]:
+              - text: Is lexical directory ordering guaranteed for every future entry under
+              - code [ref=e259]: .sdlc/logs/
+              - text: "?"
+        - generic [ref=e260]:
+          - heading "Missing or Weak Test Coverage" [level=3] [ref=e261]
+          - list [ref=e262]:
+            - listitem [ref=e263]: No fixture covers the orchestrator’s dry-run output shape.
+            - listitem [ref=e264]: No test covers stray non-run directories or partially-created newest directories beyond the missing-manifest case.
+            - listitem [ref=e265]: No explicit case covers runs that include manual steps.
+        - generic [ref=e266]:
+          - heading "Reviewer Questions" [level=3] [ref=e267]
+          - list [ref=e268]:
+            - listitem [ref=e269]: Is the human-readable orchestrator log intended to be a parsing contract, or should a machine-readable status artifact exist instead?
+            - listitem [ref=e270]: Does the repository want to continue building custom Bash test utilities for future shell features?
+            - listitem [ref=e271]: Should status reporting privilege recency, or validity, when the newest run artifact set is incomplete?
+        - generic [ref=e272]:
+          - heading "Assessment" [level=3] [ref=e273]
+          - paragraph [ref=e274]: "The branch stays close to scope and the production changes are easy to justify. Review should focus less on whether the feature belongs and more on the long-term contract choices: parsing stability, malformed latest-run policy, and test-harness direction."

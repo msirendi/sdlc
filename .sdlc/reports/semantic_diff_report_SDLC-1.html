@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semantic Diff Report: SDLC-1</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-alt: #0f1720;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --heading: #f0f6fc;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --unclear: #db6d28;
+      --code-bg: #010409;
+      --code-border: #21262d;
+      --inline: #79c0ff;
+      --kw: #ff7b72;
+      --fn: #d2a8ff;
+      --var: #ffa657;
+      --str: #a5d6ff;
+      --num: #79c0ff;
+      --com: #8b949e;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0d1117 0%, #0b1220 100%);
+      color: var(--text);
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    .hero {
+      padding: 24px 28px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(13,17,23,0.9));
+      box-shadow: 0 20px 60px rgba(1, 4, 9, 0.35);
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      color: var(--heading);
+      line-height: 1.25;
+    }
+
+    h1 {
+      margin-top: 10px;
+      font-size: 32px;
+    }
+
+    h2 {
+      font-size: 22px;
+    }
+
+    h3 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    p {
+      margin: 0 0 10px;
+    }
+
+    .summary {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(22, 27, 34, 0.72);
+      color: var(--heading);
+      font-size: 13px;
+    }
+
+    .lead {
+      max-width: 980px;
+      margin-top: 14px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 22px;
+      margin-top: 26px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(22, 27, 34, 0.95);
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(1, 4, 9, 0.24);
+    }
+
+    .card-head {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(88,166,255,0.06), rgba(22,27,34,0));
+    }
+
+    .paths {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .path {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(13, 17, 23, 0.7);
+      color: var(--inline);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+      gap: 0;
+    }
+
+    .pane {
+      padding: 22px 24px 24px;
+    }
+
+    .pane + .pane {
+      border-left: 1px solid var(--border);
+      background: var(--panel-alt);
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    li {
+      margin: 0 0 10px;
+    }
+
+    .audit-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .audit-item {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(13, 17, 23, 0.56);
+    }
+
+    .audit-item.strong {
+      border-left: 4px solid var(--success);
+    }
+
+    .audit-item.probable {
+      border-left: 4px solid var(--warn);
+    }
+
+    .audit-item.weak {
+      border-left: 4px solid var(--danger);
+      background: rgba(248, 81, 73, 0.08);
+    }
+
+    .audit-item.unclear {
+      border-left: 4px solid var(--unclear);
+      background: rgba(219, 109, 40, 0.08);
+    }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge.strong {
+      background: rgba(63, 185, 80, 0.18);
+      color: #7ee787;
+    }
+
+    .badge.probable {
+      background: rgba(210, 153, 34, 0.18);
+      color: #e3b341;
+    }
+
+    .badge.weak {
+      background: rgba(248, 81, 73, 0.18);
+      color: #ff938a;
+    }
+
+    .badge.unclear {
+      background: rgba(219, 109, 40, 0.18);
+      color: #ffb77c;
+    }
+
+    .code-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .snippet {
+      margin: 0 0 16px;
+      border: 1px solid var(--code-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--code-bg);
+    }
+
+    .snippet-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--code-border);
+      background: #0d1117;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      color: var(--text);
+      font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .kw { color: var(--kw); }
+    .fn { color: var(--fn); }
+    .var { color: var(--var); }
+    .str { color: var(--str); }
+    .num { color: var(--num); }
+    .com { color: var(--com); font-style: italic; }
+    .op { color: #c9d1d9; }
+
+    code.inline {
+      padding: 0.15em 0.35em;
+      border-radius: 6px;
+      background: rgba(110, 118, 129, 0.18);
+      color: var(--inline);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95em;
+    }
+
+    .footer-card {
+      padding: 24px;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .footer-box {
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(13, 17, 23, 0.56);
+    }
+
+    .footer-box h3 {
+      margin-top: 0;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    @media (max-width: 1040px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .pane + .pane {
+        border-left: 0;
+        border-top: 1px solid var(--border);
+      }
+    }
+
+    @media (max-width: 720px) {
+      .wrap {
+        padding: 18px 14px 30px;
+      }
+
+      h1 {
+        font-size: 26px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Semantic Diff Report</div>
+      <h1>SDLC-1: <code class="inline">sdlc-status</code> branch review</h1>
+      <p class="lead">
+        This branch is tightly aligned to the ticket: it introduces a Bash-only status command that summarizes the
+        latest pipeline run, documents the operator workflow, and adds a bespoke shell test surface to lock the
+        behavior down. The main review pressure points are parser coupling to human-readable log text, the decision to
+        fail on a malformed newest run instead of falling back, and whether the new custom test harness is a precedent
+        the repository wants to keep expanding.
+      </p>
+      <div class="summary">
+        <div class="pill">Compare: <code class="inline">main...sdlc-1/sdlc-status</code></div>
+        <div class="pill">Diff size: 6 files, 791 insertions</div>
+        <div class="pill">Production files: <code class="inline">README.md</code>, <code class="inline">orchestrator/status.sh</code></div>
+        <div class="pill">Support files: 4 Bash test files</div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 1: Implement a repo-aware latest-run summarizer</h2>
+          <div class="paths">
+            <span class="path">orchestrator/status.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>Expose the last pipeline run as a concise, human-readable status summary without forcing operators to inspect <code class="inline">.sdlc/logs/</code> manually.</p>
+
+            <h3>Why This Change Exists</h3>
+            <p>
+              The ticket’s core requirement is operational visibility: the pipeline already emits a manifest and
+              orchestrator log, but there was no lightweight reader for them. This block turns those artifacts into a
+              stable operator command while staying inside the repo’s Bash-only, no-extra-runtime constraints.
+            </p>
+
+            <h3>Justification Audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                Sourcing <code class="inline">config.sh</code> and <code class="inline">lib/common.sh</code>, reusing
+                <code class="inline">sdlc_log</code>, and resolving the repository with
+                <code class="inline">git rev-parse --show-toplevel</code> all directly support the stated requirement to
+                run from any directory inside the target repo while matching existing orchestrator conventions.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">find_latest_run_dir</code> selects the lexically newest child directory under
+                <code class="inline">.sdlc/logs/</code>, which matches the pipeline’s timestamp-based run IDs and avoids
+                any need for external tools.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">parse_manifest</code> uses the manifest as the source of truth for planned-step
+                order and repository path. That is the correct artifact to preserve the intended step list, especially
+                when some planned steps never completed.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <code class="inline">parse_orchestrator_log</code> scrapes exact human-readable phrases such as
+                <code class="inline">Repository:</code>, <code class="inline">Completed</code>,
+                <code class="inline">Pipeline halted at</code>, and <code class="inline">Run complete</code>. This is
+                valid against today’s producer, but it creates a brittle coupling: wording changes in
+                <code class="inline">run-pipeline.sh</code> will break status parsing even if the pipeline still works.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The summary renderer maps planned steps to <code class="inline">✓ completed</code>,
+                <code class="inline">✗ failed</code>, and <code class="inline">– skipped</code>, humanizes elapsed
+                seconds, and prints the log directory. Those are exactly the user-facing fields requested by the ticket.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                Treating a malformed newest run as a hard error is defensible because it avoids silently reporting stale
+                information from an older run. It is still a policy choice rather than an explicit requirement, so the
+                reviewer should confirm that “latest run is corrupt” is intended to be fatal.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The <code class="inline">main</code> guard is not operator-visible, but it is coherent with the later
+                test additions because it allows the helper functions to be sourced safely without changing CLI behavior.
+              </div>
+            </div>
+
+            <h3>Behavioral Impact</h3>
+            <ul>
+              <li>Introduces a new command path: <code class="inline">bash orchestrator/status.sh</code>.</li>
+              <li>Works from nested directories inside a governed repository because it re-roots via Git.</li>
+              <li>Reports no runs as a successful, non-error condition.</li>
+              <li>Marks incomplete or interrupted runs by leaving elapsed time unavailable and leaving remaining planned steps skipped.</li>
+              <li>Fails fast if the newest run directory is missing required artifacts.</li>
+            </ul>
+
+            <h3>Reviewer Scrutiny</h3>
+            <ul>
+              <li>Confirm that <code class="inline">run-pipeline.sh</code> log text is a stable contract, or accept that <code class="inline">status.sh</code> must be updated alongside any wording change.</li>
+              <li>Verify whether dry-run output should be treated as “unavailable / interrupted” or deserves a dedicated dry-run status instead.</li>
+              <li>Decide whether the command should fall back to the newest valid run when the newest directory is corrupt.</li>
+              <li>Verify that <code class="inline">.sdlc/logs/</code> will only contain sortable run directories and no stray folders that could sort after a timestamp.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title">
+              <span>Relevant new code</span>
+              <span class="muted">new code only</span>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/status.sh</div>
+              <pre><code><span class="var">repo_root</span><span class="op">=</span>$(git rev-parse --show-toplevel)
+<span class="var">logs_dir</span><span class="op">=</span><span class="str">"$repo_root/$LOGS_DIR_REL"</span>
+
+<span class="kw">if</span> ! <span class="var">latest_run_dir</span><span class="op">=</span>$(find_latest_run_dir <span class="str">"$logs_dir"</span>); <span class="kw">then</span>
+  printf <span class="str">'No pipeline runs found.\n'</span>
+  exit <span class="num">0</span>
+<span class="kw">fi</span>
+
+<span class="var">manifest_file</span><span class="op">=</span><span class="str">"$latest_run_dir/pipeline-manifest.md"</span>
+<span class="var">orchestrator_log</span><span class="op">=</span><span class="str">"$latest_run_dir/orchestrator.log"</span>
+
+parse_manifest <span class="str">"$manifest_file"</span>
+parse_orchestrator_log <span class="str">"$orchestrator_log"</span>
+
+<span class="kw">for</span> <span class="var">step_name</span> <span class="kw">in</span> <span class="str">"${PLANNED_STEPS[@]}"</span>; <span class="kw">do</span>
+  <span class="kw">if</span> [[ <span class="str">-n "$FAILED_STEP"</span> &amp;&amp; <span class="str">"$step_name"</span> == <span class="str">"$FAILED_STEP"</span> ]]; <span class="kw">then</span>
+    printf <span class="str">'  ✗ failed %s\n'</span> <span class="str">"$step_name"</span>
+    <span class="kw">continue</span>
+  <span class="kw">fi</span>
+
+  <span class="kw">if</span> array_contains <span class="str">"$step_name"</span> <span class="str">"${COMPLETED_STEPS[@]}"</span>; <span class="kw">then</span>
+    printf <span class="str">'  ✓ completed %s\n'</span> <span class="str">"$step_name"</span>
+    <span class="kw">continue</span>
+  <span class="kw">fi</span>
+
+  printf <span class="str">'  – skipped %s\n'</span> <span class="str">"$step_name"</span>
+<span class="kw">done</span>
+
+<span class="kw">if</span> [[ <span class="str">-n "$ELAPSED_SECONDS"</span> ]]; <span class="kw">then</span>
+  printf <span class="str">'Elapsed: %s\n'</span> <span class="str">"$(format_duration "$ELAPSED_SECONDS")"</span>
+<span class="kw">else</span>
+  printf <span class="str">'Elapsed: unavailable\n'</span>
+  printf <span class="str">'Note: the latest run may still be in progress or was interrupted.\n'</span>
+<span class="kw">fi</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 2: Expose the operator workflow in the README</h2>
+          <div class="paths">
+            <span class="path">README.md</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>Make the new status command discoverable and usable without requiring readers to infer invocation details from the implementation.</p>
+
+            <h3>Why This Change Exists</h3>
+            <p>
+              The ticket explicitly requires documentation and a shell-function example. Without this block, the new
+              script would exist but remain hidden behind internal directory knowledge and installation assumptions.
+            </p>
+
+            <h3>Justification Audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The new <code class="inline">Checking run status</code> section introduces the command in the exact place
+                operators already look for usage patterns.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The symbol legend for <code class="inline">✓</code>, <code class="inline">✗</code>, and
+                <code class="inline">–</code> matters because the script compresses state into short status lines; the
+                legend removes ambiguity at first use.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The <code class="inline">sdlc-status</code> shell function example directly addresses the requirement to
+                show users how to wire the command into their shell.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                Documenting the <code class="inline">No pipeline runs found.</code> success path captures a user-visible
+                contract that could otherwise look like a no-op or failure.
+              </div>
+            </div>
+
+            <h3>Behavioral Impact</h3>
+            <ul>
+              <li>No runtime or API behavior changes.</li>
+              <li>Reduces adoption friction by making the command, symbols, and happy-path wiring explicit.</li>
+            </ul>
+
+            <h3>Reviewer Scrutiny</h3>
+            <ul>
+              <li>Verify the README’s <code class="inline">SDLC_HOME</code> example matches the project’s expected installation layout.</li>
+              <li>Ensure the documented output contract stays in sync if the script wording changes later.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title">
+              <span>Relevant new code</span>
+              <span class="muted">new code only</span>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">README.md</div>
+              <pre><code><span class="kw">##</span> Checking run status
+
+Use the status command from anywhere inside a governed repository to inspect the
+latest pipeline run without browsing <span class="str">`.sdlc/logs/`</span> manually:
+
+<span class="str">```bash</span>
+bash <span class="str">"$SDLC_HOME/orchestrator/status.sh"</span>
+<span class="str">```</span>
+
+The summary reports the latest run ID, repository name, per-step outcome,
+elapsed time, and the log directory path. Step states are shown as:
+
+- <span class="str">`✓ completed`</span>: the step finished successfully
+- <span class="str">`✗ failed`</span>: the pipeline halted at that step
+- <span class="str">`– skipped`</span>: the step was planned for the run but did not complete
+
+<span class="str">```bash</span>
+sdlc-status() {
+  SDLC_HOME=<span class="str">"${SDLC_HOME:-/path/to/sdlc}"</span> \
+    bash <span class="str">"$SDLC_HOME/orchestrator/status.sh"</span>
+}
+<span class="str">```</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 3: Add Bash-native test scaffolding without external frameworks</h2>
+          <div class="paths">
+            <span class="path">orchestrator/status.sh</span>
+            <span class="path">tests/testlib.sh</span>
+            <span class="path">tests/run.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>Make the new Bash feature testable in-repo with the same minimal runtime assumptions as the production scripts.</p>
+
+            <h3>Why This Change Exists</h3>
+            <p>
+              The feature is implemented in Bash and the repo already validates shell scripts with
+              <code class="inline">shellcheck</code>. To get meaningful regression coverage without adding Bats or
+              another dependency, this block builds a small native harness that can fabricate run artifacts and assert
+              on the resulting command output.
+            </p>
+
+            <h3>Justification Audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                Guarding <code class="inline">main</code> behind
+                <code class="inline">[[ "${BASH_SOURCE[0]}" == "$0" ]]</code> is the cleanest way to let tests source
+                helper functions without changing the command-line behavior.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <code class="inline">tests/testlib.sh</code> centralizes assertions, temp-directory lifecycle, fixture
+                generation, path normalization, and captured command execution. That is coherent support code for a
+                Bash-only repo.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The harness uses <code class="inline">eval</code> inside <code class="inline">join_array</code> to stay
+                compatible with Bash 3.2, which lacks newer array conveniences. The use is safe here because the array
+                names are hard-coded test inputs, but it is still a sharp tool.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">tests/run.sh</code> creates a single entrypoint for the status-related tests, which
+                later pipeline steps can execute consistently.
+              </div>
+              <div class="audit-item unclear">
+                <span class="badge unclear">Unclear / possibly superfluous</span>
+                The bespoke test library is larger than the production script it supports. It is internally coherent, but
+                reviewers should decide whether the repository wants to maintain custom shell-test infrastructure as a
+                long-term pattern instead of eventually standardizing on an existing shell test tool.
+              </div>
+            </div>
+
+            <h3>Behavioral Impact</h3>
+            <ul>
+              <li><code class="inline">orchestrator/status.sh</code> becomes safe to source for unit testing.</li>
+              <li>The repository gains a dedicated Bash test entrypoint at <code class="inline">bash tests/run.sh</code>.</li>
+            </ul>
+
+            <h3>Reviewer Scrutiny</h3>
+            <ul>
+              <li>Confirm the repo intentionally prefers homegrown shell test helpers over a standard framework.</li>
+              <li>Verify the <code class="inline">eval</code> and <code class="inline">trap</code> usage stays confined to tests.</li>
+              <li>Check Bash 3.2 compatibility, since that compatibility concern drove several harness design choices.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title">
+              <span>Relevant new code</span>
+              <span class="muted">new code only</span>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/status.sh</div>
+              <pre><code><span class="kw">if</span> [[ <span class="str">"${BASH_SOURCE[0]}"</span> == <span class="str">"$0"</span> ]]; <span class="kw">then</span>
+  main <span class="str">"$@"</span>
+<span class="kw">fi</span></code></pre>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">tests/testlib.sh</div>
+              <pre><code><span class="fn">capture_command</span>() {
+  <span class="kw">local</span> <span class="var">workdir</span><span class="op">=</span><span class="str">"$1"</span>
+  <span class="kw">shift</span>
+
+  <span class="kw">set</span> +e
+  <span class="var">CAPTURED_OUTPUT</span><span class="op">=</span>$(cd <span class="str">"$workdir"</span> &amp;&amp; <span class="str">"$@"</span> <span class="num">2</span>&gt;&amp;<span class="num">1</span>)
+  <span class="var">CAPTURED_STATUS</span><span class="op">=</span><span class="str">$?</span>
+  <span class="kw">set</span> -e
+}
+
+<span class="fn">write_manifest</span>() {
+  <span class="kw">local</span> <span class="var">run_dir</span><span class="op">=</span><span class="str">"$1"</span>
+  <span class="kw">local</span> <span class="var">repo_path</span><span class="op">=</span><span class="str">"$2"</span>
+  <span class="kw">shift</span> <span class="num">2</span>
+
+  {
+    printf <span class="str">'# Pipeline Run Manifest\n\n'</span>
+    printf -- <span class="str">'- Repository: `%s`\n'</span> <span class="str">"$repo_path"</span>
+    printf <span class="str">'## Planned steps\n'</span>
+    <span class="kw">for</span> <span class="var">step_name</span> <span class="kw">in</span> <span class="str">"$@"</span>; <span class="kw">do</span>
+      printf -- <span class="str">'- `%s` (automated, timeout 1800s)\n'</span> <span class="str">"$step_name"</span>
+    <span class="kw">done</span>
+  } &gt; <span class="str">"$run_dir/pipeline-manifest.md"</span>
+}</code></pre>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">tests/run.sh</div>
+              <pre><code><span class="var">TESTS_DIR</span><span class="op">=</span>$(cd "$(dirname <span class="str">"${BASH_SOURCE[0]}"</span>)" &amp;&amp; pwd)
+bash <span class="str">"$TESTS_DIR/status_unit_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/status_integration_test.sh"</span></code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 4: Lock in parser and CLI behavior across failure and edge cases</h2>
+          <div class="paths">
+            <span class="path">tests/status_unit_test.sh</span>
+            <span class="path">tests/status_integration_test.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>Encode the status contract so future changes to manifest structure, log wording, or output formatting break tests immediately instead of drifting silently.</p>
+
+            <h3>Why This Change Exists</h3>
+            <p>
+              The new command is parser-heavy and therefore fragile in ways that pure happy-path manual testing will not
+              catch. This block adds both helper-level tests and end-to-end fixtures so the feature can be changed
+              deliberately instead of accidentally.
+            </p>
+
+            <h3>Justification Audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                Unit tests for <code class="inline">find_latest_run_dir</code>, <code class="inline">parse_manifest</code>,
+                <code class="inline">parse_orchestrator_log</code>, <code class="inline">format_duration</code>, and
+                <code class="inline">array_contains</code> isolate the parser and formatting behavior that is most likely
+                to regress during later maintenance.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                Integration tests cover the ticket’s required scenarios: no prior runs, successful run output, failed
+                run output, nested-directory invocation, and elapsed-time rendering, plus incomplete-run behavior that
+                naturally follows from the implementation.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The malformed-newest-run test documents the choice to fail rather than walk back to an older run. That
+                behavior is not explicitly required by the ticket, but once chosen it is reasonable to pin down.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                Testing the outside-git-repo failure path is slightly broader than the acceptance criteria, but it fits
+                the implementation’s repo-root resolution contract and catches an important operator mistake.
+              </div>
+            </div>
+
+            <h3>Behavioral Impact</h3>
+            <ul>
+              <li>No production behavior changes; the impact is regression detection.</li>
+              <li>The branch now has explicit executable examples for the output contract and several edge conditions.</li>
+            </ul>
+
+            <h3>Reviewer Scrutiny</h3>
+            <ul>
+              <li>Request a dry-run fixture if dry runs are expected to be common; current coverage does not pin down that output.</li>
+              <li>Consider a test for non-run directories under <code class="inline">.sdlc/logs/</code> and for a missing <code class="inline">orchestrator.log</code>, not just a missing manifest.</li>
+              <li>Consider coverage for runs that include manual steps, since the manifest parser currently treats planned steps generically.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title">
+              <span>Relevant new code</span>
+              <span class="muted">new code only</span>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">tests/status_unit_test.sh</div>
+              <pre><code><span class="fn">test_parse_orchestrator_log_collects_completed_failed_and_elapsed_data</span>() {
+  <span class="kw">local</span> <span class="var">log_file</span><span class="op">=</span><span class="str">"$TEST_TEMP_DIR/orchestrator.log"</span>
+
+  cat &lt;&lt;<span class="str">'EOF'</span> &gt; <span class="str">"$log_file"</span>
+[2026-04-13 14:25:31] [INFO] Repository: fixture-repo
+[2026-04-13 14:30:54] [INFO] Completed 03-implement.md
+[2026-04-13 14:24:14] [ERROR] Pipeline halted at 04-agents-md-check.md
+[2026-04-13 14:24:14] [INFO] Run complete: 2 succeeded, 1 failed, 287s elapsed.
+EOF
+
+  parse_orchestrator_log <span class="str">"$log_file"</span>
+
+  assert_equals <span class="str">"fixture-repo"</span> <span class="str">"$REPO_NAME"</span>
+  assert_equals <span class="str">"04-agents-md-check.md"</span> <span class="str">"$FAILED_STEP"</span>
+  assert_equals <span class="str">"287"</span> <span class="str">"$ELAPSED_SECONDS"</span>
+}</code></pre>
+            </div>
+            <div class="snippet">
+              <div class="snippet-head">tests/status_integration_test.sh</div>
+              <pre><code><span class="fn">test_status_command_failed_run_marks_failed_and_skipped_steps</span>() {
+  create_git_repo <span class="str">"$repo_dir"</span>
+  <span class="var">run_dir</span><span class="op">=</span>$(create_run_dir <span class="str">"$repo_dir"</span> <span class="str">"20260413-142531"</span>)
+
+  write_manifest <span class="str">"$run_dir"</span> <span class="str">"$repo_dir"</span> \
+    <span class="str">"01-branch-setup.md"</span> \
+    <span class="str">"02-technical-spec.md"</span> \
+    <span class="str">"03-implement.md"</span>
+
+  write_orchestrator_log <span class="str">"$run_dir"</span> <span class="str">"fixture-repo"</span> <span class="str">"287"</span> <span class="str">"02-technical-spec.md"</span> \
+    <span class="str">"01-branch-setup.md"</span>
+
+  capture_command <span class="str">"$repo_dir"</span> bash <span class="str">"$STATUS_SCRIPT"</span>
+
+  assert_contains <span class="str">"$CAPTURED_OUTPUT"</span> <span class="str">"  ${CROSS_MARK} failed 02-technical-spec.md"</span>
+  assert_contains <span class="str">"$CAPTURED_OUTPUT"</span> <span class="str">"  ${SKIP_MARK} skipped 03-implement.md"</span>
+  assert_contains <span class="str">"$CAPTURED_OUTPUT"</span> <span class="str">"Elapsed: 4m 47s"</span>
+}</code></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card footer-card">
+        <h2>Overall Review Summary</h2>
+        <div class="footer-grid">
+          <div class="footer-box">
+            <h3>Overall PR Objective</h3>
+            <p>
+              Add an operator-facing <code class="inline">sdlc-status</code> workflow that summarizes the most recent
+              pipeline run from existing artifacts, document how to invoke it, and protect the behavior with native
+              shell tests.
+            </p>
+          </div>
+          <div class="footer-box">
+            <h3>Potentially Superfluous Changes</h3>
+            <p>
+              No production edit looks obviously superfluous. The only arguable stretch is the size of
+              <code class="inline">tests/testlib.sh</code>; it is coherent support code, but it establishes a custom
+              shell-test framework that is larger than this feature alone requires.
+            </p>
+          </div>
+          <div class="footer-box">
+            <h3>Changes That Need Author Explanation</h3>
+            <ul>
+              <li>Is failing on the malformed newest run an intentional user contract, or should the command fall back to the newest valid run?</li>
+              <li>Should dry runs be reported distinctly rather than as “elapsed unavailable / possibly interrupted”?</li>
+              <li>Is lexical directory ordering guaranteed for every future entry under <code class="inline">.sdlc/logs/</code>?</li>
+            </ul>
+          </div>
+          <div class="footer-box">
+            <h3>Missing or Weak Test Coverage</h3>
+            <ul>
+              <li>No fixture covers the orchestrator’s dry-run output shape.</li>
+              <li>No test covers stray non-run directories or partially-created newest directories beyond the missing-manifest case.</li>
+              <li>No explicit case covers runs that include manual steps.</li>
+            </ul>
+          </div>
+          <div class="footer-box">
+            <h3>Reviewer Questions</h3>
+            <ul>
+              <li>Is the human-readable orchestrator log intended to be a parsing contract, or should a machine-readable status artifact exist instead?</li>
+              <li>Does the repository want to continue building custom Bash test utilities for future shell features?</li>
+              <li>Should status reporting privilege recency, or validity, when the newest run artifact set is incomplete?</li>
+            </ul>
+          </div>
+          <div class="footer-box">
+            <h3>Assessment</h3>
+            <p>
+              The branch stays close to scope and the production changes are easy to justify. Review should focus less
+              on whether the feature belongs and more on the long-term contract choices: parsing stability, malformed
+              latest-run policy, and test-harness direction.
+            </p>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

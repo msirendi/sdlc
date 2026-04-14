@@ -1,0 +1,6 @@
+
+# SDLC pipeline logs
+.sdlc/logs/
+
+# Playwright MCP logs
+.playwright-mcp/*.log
