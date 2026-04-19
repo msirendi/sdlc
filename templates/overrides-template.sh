@@ -17,4 +17,4 @@
 # STEP_PERMISSION_MODES+=("09-semantic-diff-report.md=plan")
 
 # Example: pass additional Claude CLI flags (space-separated).
-# CLAUDE_EXTRA_ARGS="--max-turns 40 --max-budget-usd 10.00"
+# CLAUDE_EXTRA_ARGS="--max-budget-usd 10.00 --fallback-model claude-sonnet-4-6"

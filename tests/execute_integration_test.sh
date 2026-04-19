@@ -141,17 +141,17 @@ test_run_claude_step_applies_per_step_permission_mode_override() {
 test_run_claude_step_forwards_claude_extra_args() {
   load_execute_environment
   setup_execute_fixture
-  CLAUDE_EXTRA_ARGS="--max-turns 40 --max-budget-usd 10.00"
+  CLAUDE_EXTRA_ARGS="--max-budget-usd 10.00 --fallback-model claude-sonnet-4-6"
 
   invoke_run_claude_step
   assert_exit_code 0 "$RUN_CLAUDE_STATUS" "Expected invocation with extra args to succeed."
 
   local args
   args=$(cat "$CLAUDE_ARGS_FILE")
-  assert_contains "$args" "--max-turns"$'\n'"40" \
-    "Expected CLAUDE_EXTRA_ARGS to forward --max-turns with its value as separate argv entries."
   assert_contains "$args" "--max-budget-usd"$'\n'"10.00" \
-    "Expected CLAUDE_EXTRA_ARGS to forward --max-budget-usd with its value."
+    "Expected CLAUDE_EXTRA_ARGS to forward --max-budget-usd with its value as separate argv entries."
+  assert_contains "$args" "--fallback-model"$'\n'"claude-sonnet-4-6" \
+    "Expected CLAUDE_EXTRA_ARGS to forward --fallback-model with its value."
 }
 
 test_run_claude_step_passes_full_prompt_on_stdin() {

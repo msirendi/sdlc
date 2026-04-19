@@ -87,9 +87,13 @@ EOF
   set +e
   (
     cd "$repo_root"
-    # --output-format is pinned to 'text' because the summary-capture step below
-    # assumes $log_file contains the final assistant message as prose. Any other
-    # format (stream-json, json) would silently break downstream steps 9 and 10.
+    : > "$log_file"
+    : > "$summary_file"
+    # --output-format is pinned to 'text' because $summary_file is written
+    # verbatim from claude's stdout below and downstream steps 9 and 10 read
+    # it as prose. Any other format (stream-json, json) would silently break
+    # them. Stderr is routed into $log_file only so framework chatter never
+    # contaminates the summary the retry/validator loop consumes.
     printf '%s' "$full_prompt" | sdlc_run_with_timeout "$timeout_seconds" \
       claude \
         --print \
@@ -98,20 +102,16 @@ EOF
         --permission-mode "$permission_mode" \
         --output-format text \
         ${claude_args[@]+"${claude_args[@]}"} \
-        2>&1 | tee "$log_file"
-    # Pipeline is: printf | sdlc_run_with_timeout claude ... | tee. The claude
-    # (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0] is always
-    # printf's success and would mask real failures from the retry loop.
+        2> >(tee -a "$log_file" >&2) \
+      | tee "$summary_file" \
+      | tee -a "$log_file"
+    # Pipeline is: printf | sdlc_run_with_timeout claude | tee summary | tee log.
+    # The claude (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0]
+    # is always printf's success and would mask real failures from the retry loop.
     exit "${PIPESTATUS[1]}"
   )
   local exit_code=$?
   set -e
-
-  # Capture the final Claude response as the step summary. The `--print` flag
-  # sends the last assistant message to stdout, which is what we tee'd above.
-  if [[ -s "$log_file" ]]; then
-    cp "$log_file" "$summary_file"
-  fi
 
   return "$exit_code"
 }
