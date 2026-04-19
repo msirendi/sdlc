@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Remote feature branch (e.g. `name/my-fix-branch`)
+- Remote feature branch (e.g. `<handle>/my-fix-branch`)
 - Pull request associated with the branch
 - Current review and CI status
 

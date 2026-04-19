@@ -1,20 +1,20 @@
 # AI-Governed SDLC Pipeline
 
-A runnable SDLC package driven by the Claude Code CLI. It contains:
+This repository is a runnable SDLC package driven by the Claude Code CLI, not just a set of markdown prompts. It contains:
 
 - A 16-step feature delivery process expressed as explicit step files.
-- An orchestrator that runs the automated steps in order against any target repository.
-- Repo-initialization helpers and artifact templates so later steps consume durable outputs.
+- An orchestrator that runs the automated steps in order.
+- Repo-initialization helpers and artifact templates so later steps can consume durable outputs.
 - Manual closeout checklists for merge and cleanup.
 
-## What the pipeline governs
+## What this governs
 
-Full feature lifecycle in a target repository:
+The package is designed to govern the full feature lifecycle in a target repository:
 
 1. Branch setup and isolated worktree creation
 2. Technical specification from task intent
 3. Implementation
-4. Repository instruction compliance review (`AGENTS.md`)
+4. Repository instruction compliance review
 5. Test authoring
 6. Full-suite execution
 7. Pull request creation
@@ -25,18 +25,18 @@ Full feature lifecycle in a target repository:
 12. Push and hook enforcement
 13. CI remediation
 14. Rebase and re-validation
-15. Merge checklist (manual)
-16. Cleanup checklist (manual)
+15. Merge checklist
+16. Cleanup checklist
 
-Steps 1–14 run automated. Steps 15 and 16 are manual operator checklists excluded from automated runs by default.
+Steps `01` through `14` are automated. Steps `15` and `16` are manual by default and remain explicit operator checklists.
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `01-branch-setup.md` … `16-cleanup.md` | Canonical SDLC step instructions |
+| `01-branch-setup.md` ... `16-cleanup.md` | The canonical SDLC step instructions |
 | [`orchestrator/run-pipeline.sh`](orchestrator/run-pipeline.sh) | Main runner for automated steps |
-| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Initializes `.sdlc/` inside a target repo |
+| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Initializes `.sdlc/` inside an existing target repo |
 | [`orchestrator/config.sh`](orchestrator/config.sh) | Default model, effort, timeout, retry, and artifact rules |
 | [`orchestrator/status.sh`](orchestrator/status.sh) | Prints the latest run summary |
 | [`orchestrator/lib/`](orchestrator/lib) | Execution, validation, context, and notification helpers |
@@ -45,25 +45,25 @@ Steps 1–14 run automated. Steps 15 and 16 are manual operator checklists exclu
 
 ## Target repo contract
 
-Each governed repository contains a tracked `.sdlc/` directory:
+Each governed repository should contain a tracked `.sdlc/` directory with:
 
-- `.sdlc/task.md` — feature intent and acceptance criteria
-- `.sdlc/overrides.sh` — optional per-repo model, timeout, or permission overrides
-- `.sdlc/artifacts/technical-spec.md` — canonical spec produced by Step 2
-- `.sdlc/artifacts/pr-body.md` — canonical PR description produced by Step 7
-- `.sdlc/artifacts/semantic-review-actions.md` — remediation log produced by Step 10
-- `.sdlc/artifacts/ultra-review.md` — `/ultrareview` findings and triage produced by Step 11
-- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` — reviewer-facing report from Step 9
-- `.sdlc/logs/` — run logs and rolling pipeline context; gitignored
+- `.sdlc/task.md`: feature intent and acceptance criteria
+- `.sdlc/overrides.sh`: optional per-repo model, timeout, or permission overrides
+- `.sdlc/artifacts/technical-spec.md`: canonical spec produced by Step 2
+- `.sdlc/artifacts/pr-body.md`: canonical PR description produced by Step 7
+- `.sdlc/artifacts/semantic-review-actions.md`: remediation log produced by Step 10
+- `.sdlc/artifacts/ultra-review.md`: `/ultrareview` findings and triage produced by Step 11
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 9
+- `.sdlc/logs/`: run logs, summaries, and rolling pipeline context; gitignored
 
-`init-target-repo.sh` creates the directories and seed files.
+The init script creates the directories and seed files inside an existing repository for you.
 
 ## Prerequisites
 
-- `claude` CLI installed: `npm install -g @anthropic-ai/claude-code`
+- `claude` CLI installed, for example `npm install -g @anthropic-ai/claude-code`
 - Claude Code authenticated locally (`claude auth`)
 - A git repository to govern
-- Any repo-specific access the steps need (e.g. GitHub or Linear CLIs)
+- Any repo-specific access needed by the steps, such as GitHub or Linear
 
 ## Default model configuration
 
@@ -77,29 +77,16 @@ Override any of these per-repo in `.sdlc/overrides.sh` (see [`templates/override
 
 ## Quick start
 
-Clone this repo and export `SDLC_HOME` so helpers resolve the step library:
-
-```bash
-export SDLC_HOME=/absolute/path/to/sdlc
-```
-
-Optional shell aliases:
-
-```bash
-alias sdlc-init='bash "$SDLC_HOME/orchestrator/init-target-repo.sh"'
-alias sdlc-dry='bash "$SDLC_HOME/orchestrator/run-pipeline.sh" --dry-run'
-alias sdlc='bash "$SDLC_HOME/orchestrator/run-pipeline.sh"'
-alias sdlc-status='bash "$SDLC_HOME/orchestrator/status.sh"'
-```
-
-1. Initialize SDLC support inside the target repo (once per repo):
+1. In the existing repo you want to work on, initialize SDLC support once:
 
    ```bash
-   cd /path/to/target-repo
+   cd /path/to/existing-repo
    sdlc-init
    ```
 
-2. Fill in `.sdlc/task.md` with the feature intent and acceptance criteria.
+   This does not create a new repository. It just adds `.sdlc/` scaffolding to the repo you are already in.
+
+2. Fill in `.sdlc/task.md` for the new task.
 
 3. Preview the run:
 
@@ -107,46 +94,58 @@ alias sdlc-status='bash "$SDLC_HOME/orchestrator/status.sh"'
    sdlc-dry
    ```
 
-4. Run the automated pipeline:
+4. Run the automated SDLC:
 
    ```bash
    sdlc
    ```
 
-5. Resume or target a single step:
+5. Resume or target a single step as needed:
 
    ```bash
    sdlc --start-from 08-review-comments.md
    sdlc --only 11-ultra-review.md
    ```
 
-## Inspecting run status
+## Checking run status
 
-Run from anywhere inside a governed repository to inspect the latest pipeline run:
+Use the status command from anywhere inside a governed repository to inspect the
+latest pipeline run without browsing `.sdlc/logs/` manually:
 
 ```bash
-sdlc-status
+bash "$SDLC_HOME/orchestrator/status.sh"
 ```
 
-Output reports the run ID, repository, per-step outcome, elapsed time, and log directory. Step states:
+The summary reports the latest run ID, repository name, per-step outcome,
+elapsed time, and the log directory path. Step states are shown as:
 
-- `✓ completed` — step finished successfully
-- `✗ failed` — pipeline halted at that step
-- `– skipped` — planned but not executed
+- `✓ completed`: the step finished successfully
+- `✗ failed`: the pipeline halted at that step
+- `– skipped`: the step was planned for the run but did not complete
 
-If no prior runs exist, the command prints `No pipeline runs found.` and exits 0.
+If your shell does not already expose a helper, add one like this:
 
-## Governance rules
+```bash
+sdlc-status() {
+  SDLC_HOME="${SDLC_HOME:-/path/to/sdlc}" \
+    bash "$SDLC_HOME/orchestrator/status.sh"
+}
+```
+
+When no prior runs exist for the current repository, the command prints
+`No pipeline runs found.` and exits successfully.
+
+## Governance rules baked into this package
 
 - Automated steps pass context forward via recorded step summaries, not implicit chat state.
-- Durable outputs live under `.sdlc/artifacts/` and `.sdlc/reports/`.
-- Manual steps are excluded from automated runs by default and called out explicitly at the end.
+- Durable outputs are written into canonical `.sdlc/artifacts/` and `.sdlc/reports/` paths.
+- Manual steps are not silently skipped; they are excluded by default and called out explicitly at the end of the run.
 - The runner is macOS-friendly and does not assume GNU `timeout` exists.
-- Repository-specific files like `AGENTS.md` and `Contributing.md` are used when present; the package works if they are absent.
+- Repository-specific files such as `AGENTS.md` and `Contributing.md` are used when present; the package still works if they are absent.
 
 ## Extending the pipeline
 
-Start from [`templates/step-template.md`](templates/step-template.md). Keep new steps:
+Use [`templates/step-template.md`](templates/step-template.md) for new steps. Keep them:
 
 - Single-purpose
 - Explicit about inputs and output paths

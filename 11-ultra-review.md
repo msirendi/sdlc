@@ -38,7 +38,7 @@
 
 5. **Apply the accepted fixes** in a single commit using the repository's conventional header format:
    ```
-   fix(<scope>): address ultra-review findings
+   fix(sdlc): address ultra-review findings
    ```
    Split into multiple commits only if findings touch unrelated concerns.
 

@@ -87,13 +87,16 @@ EOF
   set +e
   (
     cd "$repo_root"
+    # --output-format is pinned to 'text' because the summary-capture step below
+    # assumes $log_file contains the final assistant message as prose. Any other
+    # format (stream-json, json) would silently break downstream steps 9 and 10.
     printf '%s' "$full_prompt" | sdlc_run_with_timeout "$timeout_seconds" \
       claude \
         --print \
         --model "$CLAUDE_MODEL" \
         --effort "$CLAUDE_EFFORT" \
         --permission-mode "$permission_mode" \
-        --output-format "$CLAUDE_OUTPUT_FORMAT" \
+        --output-format text \
         ${claude_args[@]+"${claude_args[@]}"} \
         2>&1 | tee "$log_file"
     # Pipeline is: printf | sdlc_run_with_timeout claude ... | tee. The claude

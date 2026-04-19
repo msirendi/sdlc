@@ -105,7 +105,6 @@ test_run_claude_step_invokes_claude_with_configured_flags() {
   CLAUDE_MODEL="claude-opus-4-7"
   CLAUDE_EFFORT="xhigh"
   CLAUDE_PERMISSION_MODE="acceptEdits"
-  CLAUDE_OUTPUT_FORMAT="text"
 
   invoke_run_claude_step
   assert_exit_code 0 "$RUN_CLAUDE_STATUS" "Expected run_claude_step to return the stub's exit code."
