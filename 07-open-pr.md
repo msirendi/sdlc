@@ -5,7 +5,7 @@
 
 ## Inputs
 
-- Feature branch (e.g. `marek/my-fix-branch`)
+- Feature branch (e.g. `name/my-fix-branch`)
 - Single Linear issue for the work (e.g. `AI-441`)
 - Passing or currently understood validation state
 - Summary of implemented behavior and tests
@@ -20,7 +20,7 @@
 
 1. **Ensure all commits are pushed:**
    ```
-   git push origin marek/my-fix-branch
+   git push origin name/my-fix-branch
    ```
 
 2. **Confirm the PR scope is acceptable before opening it:**
@@ -30,7 +30,7 @@
 
 3. **Draft the PR body** into `.sdlc/artifacts/pr-body.md`, then **open the PR** via the GitHub CLI or web UI:
    ```
-   gh pr create --base main --head marek/my-fix-branch --title "<type>(<scope>): <subject>" --body-file .sdlc/artifacts/pr-body.md
+   gh pr create --base main --head name/my-fix-branch --title "<type>(<scope>): <subject>" --body-file .sdlc/artifacts/pr-body.md
    ```
 
 4. **PR title format:**

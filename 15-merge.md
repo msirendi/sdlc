@@ -1,11 +1,11 @@
-# Step 14 — Merge Feature Branch to Main (Manual)
+# Step 15 — Merge Feature Branch to Main (Manual)
 
 **Mode:** Manual
 **Objective:** Finalize the change by merging the reviewed and validated remote feature branch into `main` through GitHub.
 
 ## Inputs
 
-- Remote feature branch (e.g. `marek/my-fix-branch`)
+- Remote feature branch (e.g. `name/my-fix-branch`)
 - Pull request associated with the branch
 - Current review and CI status
 

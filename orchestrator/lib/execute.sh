@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-run_codex_step() {
+run_claude_step() {
   local step_file="$1"
   local task_file="$2"
   local context_file="$3"
@@ -12,20 +12,20 @@ run_codex_step() {
   local step_name
   step_name=$(basename "$step_file")
 
-  local sandbox
-  local -a sandbox_args=()
-  local -a codex_args=()
+  local permission_mode
+  local -a claude_args=()
   local step_instructions
   local task_description=""
   local prior_context=""
   local git_status=""
   local full_prompt=""
 
-  sandbox=$(sdlc_lookup_kv STEP_SANDBOXES "$step_name" "$CODEX_SANDBOX")
-  read -r -a sandbox_args <<< "$sandbox"
+  permission_mode=$(sdlc_lookup_kv STEP_PERMISSION_MODES "$step_name" "$CLAUDE_PERMISSION_MODE")
 
-  if [[ "$CODEX_EPHEMERAL" == "true" ]]; then
-    codex_args+=(--ephemeral)
+  if [[ -n "$CLAUDE_EXTRA_ARGS" ]]; then
+    # shellcheck disable=SC2206
+    local -a extra_args=($CLAUDE_EXTRA_ARGS)
+    claude_args+=("${extra_args[@]}")
   fi
 
   if [[ -f "$task_file" ]]; then
@@ -81,21 +81,31 @@ Use this exact structure in the final message:
 EOF
 )
 
-  sdlc_log "INFO" "Model: $CODEX_MODEL | Reasoning: $CODEX_REASONING | Sandbox: $sandbox"
+  sdlc_log "INFO" "Model: $CLAUDE_MODEL | Effort: $CLAUDE_EFFORT | Permission mode: $permission_mode"
   sdlc_log "INFO" "Timeout: ${timeout_seconds}s | Step log: $log_file"
 
   set +e
-  printf '%s' "$full_prompt" | sdlc_run_with_timeout "$timeout_seconds" \
-    codex exec \
-      -C "$repo_root" \
-      -m "$CODEX_MODEL" \
-      -c "model_reasoning_effort=\"$CODEX_REASONING\"" \
-      ${sandbox_args[@]+"${sandbox_args[@]}"} \
-      ${codex_args[@]+"${codex_args[@]}"} \
-      --output-last-message "$summary_file" \
-      - 2>&1 | tee "$log_file"
-  local -a pipe_status=("${PIPESTATUS[@]}")
+  (
+    cd "$repo_root"
+    printf '%s' "$full_prompt" | sdlc_run_with_timeout "$timeout_seconds" \
+      claude \
+        --print \
+        --model "$CLAUDE_MODEL" \
+        --effort "$CLAUDE_EFFORT" \
+        --permission-mode "$permission_mode" \
+        --output-format "$CLAUDE_OUTPUT_FORMAT" \
+        ${claude_args[@]+"${claude_args[@]}"} \
+        2>&1 | tee "$log_file"
+    exit "${PIPESTATUS[0]}"
+  )
+  local exit_code=$?
   set -e
 
-  return "${pipe_status[1]}"
+  # Capture the final Claude response as the step summary. The `--print` flag
+  # sends the last assistant message to stdout, which is what we tee'd above.
+  if [[ -s "$log_file" ]]; then
+    cp "$log_file" "$summary_file"
+  fi
+
+  return "$exit_code"
 }

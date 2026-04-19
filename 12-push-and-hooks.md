@@ -1,11 +1,11 @@
-# Step 11 — Push Changes and Fix Pre-Commit Hook Issues
+# Step 12 — Push Changes and Fix Pre-Commit Hook Issues
 
 **Mode:** Automated
 **Objective:** Publish the latest branch state to the remote and resolve any repository-enforced pre-commit or pre-push issues encountered during the process.
 
 ## Inputs
 
-- Updated local branch (e.g. `marek/my-fix-branch`)
+- Updated local branch (e.g. `name/my-fix-branch`)
 - Repository hook configuration
 
 ## Prerequisites
@@ -26,7 +26,7 @@
 
 3. **Push to the remote:**
    ```
-   git push origin marek/my-fix-branch
+   git push origin name/my-fix-branch
    ```
 
 4. **If pre-commit hooks fire and block the commit or push:**
@@ -52,7 +52,7 @@
 
 7. **Confirm the push succeeded:**
    ```
-   git log --oneline origin/marek/my-fix-branch -5
+   git log --oneline origin/name/my-fix-branch -5
    ```
    Verify the remote branch contains all expected commits.
 

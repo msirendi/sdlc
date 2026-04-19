@@ -1,79 +1,105 @@
 # AI-Governed SDLC Pipeline
 
-This repository is now a runnable SDLC package, not just a set of markdown prompts. It contains:
+A runnable SDLC package driven by the Claude Code CLI. It contains:
 
-- A 15-step feature delivery process expressed as explicit step files.
-- A Codex-based orchestrator that runs the automated steps in order.
-- Repo-initialization helpers and artifact templates so later steps can consume durable outputs.
+- A 16-step feature delivery process expressed as explicit step files.
+- An orchestrator that runs the automated steps in order against any target repository.
+- Repo-initialization helpers and artifact templates so later steps consume durable outputs.
 - Manual closeout checklists for merge and cleanup.
 
-## What this governs
+## What the pipeline governs
 
-The package is designed to govern the full feature lifecycle in a target repository:
+Full feature lifecycle in a target repository:
 
 1. Branch setup and isolated worktree creation
 2. Technical specification from task intent
 3. Implementation
-4. Repository instruction compliance review
+4. Repository instruction compliance review (`AGENTS.md`)
 5. Test authoring
 6. Full-suite execution
 7. Pull request creation
 8. Review comment handling
 9. Semantic diff analysis
 10. Weak-change cleanup
-11. Push and hook enforcement
-12. CI remediation
-13. Rebase and re-validation
-14. Merge checklist
-15. Cleanup checklist
+11. Ultra-review (`/ultrareview`) bug and design-issue pass
+12. Push and hook enforcement
+13. CI remediation
+14. Rebase and re-validation
+15. Merge checklist (manual)
+16. Cleanup checklist (manual)
 
-Steps `01` through `13` are automated. Steps `14` and `15` are manual by default and remain explicit operator checklists.
+Steps 1–14 run automated. Steps 15 and 16 are manual operator checklists excluded from automated runs by default.
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `01-branch-setup.md` ... `15-cleanup.md` | The canonical SDLC step instructions |
+| `01-branch-setup.md` … `16-cleanup.md` | Canonical SDLC step instructions |
 | [`orchestrator/run-pipeline.sh`](orchestrator/run-pipeline.sh) | Main runner for automated steps |
-| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Initializes `.sdlc/` inside an existing target repo |
-| [`orchestrator/config.sh`](orchestrator/config.sh) | Default model, timeout, retry, and artifact rules |
+| [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Initializes `.sdlc/` inside a target repo |
+| [`orchestrator/config.sh`](orchestrator/config.sh) | Default model, effort, timeout, retry, and artifact rules |
+| [`orchestrator/status.sh`](orchestrator/status.sh) | Prints the latest run summary |
 | [`orchestrator/lib/`](orchestrator/lib) | Execution, validation, context, and notification helpers |
 | [`templates/`](templates) | Task, spec, PR-body, override, and step templates |
-| [`orchestrating-ai-agents-sdlc-guide.md`](orchestrating-ai-agents-sdlc-guide.md) | Reviewed operating guide aligned to this implementation |
+| [`tests/`](tests) | Orchestrator test suite |
 
 ## Target repo contract
 
-Each governed repository should contain a tracked `.sdlc/` directory with:
+Each governed repository contains a tracked `.sdlc/` directory:
 
-- `.sdlc/task.md`: feature intent and acceptance criteria
-- `.sdlc/overrides.sh`: optional per-repo timeout or sandbox overrides
-- `.sdlc/artifacts/technical-spec.md`: canonical spec produced by Step 2
-- `.sdlc/artifacts/pr-body.md`: canonical PR description produced by Step 7
-- `.sdlc/artifacts/semantic-review-actions.md`: remediation log produced by Step 10
-- `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 9
-- `.sdlc/logs/`: run logs, summaries, and rolling pipeline context; gitignored
+- `.sdlc/task.md` — feature intent and acceptance criteria
+- `.sdlc/overrides.sh` — optional per-repo model, timeout, or permission overrides
+- `.sdlc/artifacts/technical-spec.md` — canonical spec produced by Step 2
+- `.sdlc/artifacts/pr-body.md` — canonical PR description produced by Step 7
+- `.sdlc/artifacts/semantic-review-actions.md` — remediation log produced by Step 10
+- `.sdlc/artifacts/ultra-review.md` — `/ultrareview` findings and triage produced by Step 11
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` — reviewer-facing report from Step 9
+- `.sdlc/logs/` — run logs and rolling pipeline context; gitignored
 
-The init script creates the directories and seed files inside an existing repository for you.
+`init-target-repo.sh` creates the directories and seed files.
+
+## Prerequisites
+
+- `claude` CLI installed: `npm install -g @anthropic-ai/claude-code`
+- Claude Code authenticated locally (`claude auth`)
+- A git repository to govern
+- Any repo-specific access the steps need (e.g. GitHub or Linear CLIs)
+
+## Default model configuration
+
+The orchestrator invokes Claude Code in headless mode (`claude -p`) with:
+
+- Model: `claude-opus-4-7`
+- Effort: `xhigh`
+- Permission mode: `acceptEdits`
+
+Override any of these per-repo in `.sdlc/overrides.sh` (see [`templates/overrides-template.sh`](templates/overrides-template.sh)).
 
 ## Quick start
 
-Prerequisites:
+Clone this repo and export `SDLC_HOME` so helpers resolve the step library:
 
-- `codex` CLI installed, for example `npm install -g @openai/codex`
-- Codex authenticated locally
-- A git repository to govern
-- Any repo-specific access needed by the steps, such as GitHub or Linear
+```bash
+export SDLC_HOME=/absolute/path/to/sdlc
+```
 
-1. In the existing repo you want to work on, initialize SDLC support once:
+Optional shell aliases:
+
+```bash
+alias sdlc-init='bash "$SDLC_HOME/orchestrator/init-target-repo.sh"'
+alias sdlc-dry='bash "$SDLC_HOME/orchestrator/run-pipeline.sh" --dry-run'
+alias sdlc='bash "$SDLC_HOME/orchestrator/run-pipeline.sh"'
+alias sdlc-status='bash "$SDLC_HOME/orchestrator/status.sh"'
+```
+
+1. Initialize SDLC support inside the target repo (once per repo):
 
    ```bash
-   cd /path/to/existing-repo
+   cd /path/to/target-repo
    sdlc-init
    ```
 
-   This does not create a new repository. It just adds `.sdlc/` scaffolding to the repo you are already in.
-
-2. Fill in `.sdlc/task.md` for the new task.
+2. Fill in `.sdlc/task.md` with the feature intent and acceptance criteria.
 
 3. Preview the run:
 
@@ -81,59 +107,56 @@ Prerequisites:
    sdlc-dry
    ```
 
-4. Run the automated SDLC:
+4. Run the automated pipeline:
 
    ```bash
    sdlc
    ```
 
-5. Resume or target a single step as needed:
+5. Resume or target a single step:
 
    ```bash
    sdlc --start-from 08-review-comments.md
+   sdlc --only 11-ultra-review.md
    ```
 
-## Checking run status
+## Inspecting run status
 
-Use the status command from anywhere inside a governed repository to inspect the
-latest pipeline run without browsing `.sdlc/logs/` manually:
-
-```bash
-bash "$SDLC_HOME/orchestrator/status.sh"
-```
-
-The summary reports the latest run ID, repository name, per-step outcome,
-elapsed time, and the log directory path. Step states are shown as:
-
-- `✓ completed`: the step finished successfully
-- `✗ failed`: the pipeline halted at that step
-- `– skipped`: the step was planned for the run but did not complete
-
-If your shell does not already expose a helper, add one like this:
+Run from anywhere inside a governed repository to inspect the latest pipeline run:
 
 ```bash
-sdlc-status() {
-  SDLC_HOME="${SDLC_HOME:-/path/to/sdlc}" \
-    bash "$SDLC_HOME/orchestrator/status.sh"
-}
+sdlc-status
 ```
 
-When no prior runs exist for the current repository, the command prints
-`No pipeline runs found.` and exits successfully.
+Output reports the run ID, repository, per-step outcome, elapsed time, and log directory. Step states:
 
-## Governance rules baked into this package
+- `✓ completed` — step finished successfully
+- `✗ failed` — pipeline halted at that step
+- `– skipped` — planned but not executed
+
+If no prior runs exist, the command prints `No pipeline runs found.` and exits 0.
+
+## Governance rules
 
 - Automated steps pass context forward via recorded step summaries, not implicit chat state.
-- Durable outputs are written into canonical `.sdlc/artifacts/` and `.sdlc/reports/` paths.
-- Manual steps are not silently skipped; they are excluded by default and called out explicitly at the end of the run.
+- Durable outputs live under `.sdlc/artifacts/` and `.sdlc/reports/`.
+- Manual steps are excluded from automated runs by default and called out explicitly at the end.
 - The runner is macOS-friendly and does not assume GNU `timeout` exists.
-- Repository-specific files such as `AGENTS.md` and `Contributing.md` are used when present; the package still works if they are absent.
+- Repository-specific files like `AGENTS.md` and `Contributing.md` are used when present; the package works if they are absent.
 
 ## Extending the pipeline
 
-Use [`templates/step-template.md`](templates/step-template.md) for new steps. Keep them:
+Start from [`templates/step-template.md`](templates/step-template.md). Keep new steps:
 
 - Single-purpose
 - Explicit about inputs and output paths
 - Verifiable through concrete commands
 - Durable when later steps depend on their output
+
+Add any new required artifact to `STEP_REQUIRED_PATTERNS` in [`orchestrator/config.sh`](orchestrator/config.sh).
+
+## Tests
+
+```bash
+bash tests/run.sh
+```
