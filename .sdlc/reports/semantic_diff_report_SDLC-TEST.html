@@ -1,0 +1,842 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Semantic Diff Report — SDLC-TEST</title>
+<style>
+  :root {
+    --bg:#0d1117;
+    --bg-alt:#010409;
+    --surface:#161b22;
+    --surface-2:#1c232c;
+    --border:#30363d;
+    --border-strong:#484f58;
+    --text:#c9d1d9;
+    --text-dim:#8b949e;
+    --text-strong:#f0f6fc;
+    --accent:#58a6ff;
+    --accent-2:#79c0ff;
+    --green:#3fb950;
+    --red:#f85149;
+    --yellow:#d29922;
+    --orange:#db8f3e;
+    --purple:#bc8cff;
+    --warn-bg:#3b2e05;
+    --warn-border:#7a5f10;
+    --danger-bg:#3b1414;
+    --danger-border:#7a1f1f;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font:14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  header.page {
+    padding:28px 32px 16px;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg,var(--surface) 0%,var(--bg) 100%);
+  }
+  header.page h1 {
+    margin:0 0 6px;
+    font-size:22px;
+    color:var(--text-strong);
+    font-weight:600;
+  }
+  header.page .meta {
+    color:var(--text-dim);
+    font-size:13px;
+  }
+  header.page .meta code {
+    color:var(--accent-2);
+    background:var(--bg-alt);
+    padding:1px 6px;
+    border-radius:4px;
+    border:1px solid var(--border);
+  }
+  main { padding:24px 32px 48px; max-width:1600px; margin:0 auto; }
+  section.block {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:24px;
+    overflow:hidden;
+  }
+  section.block > header {
+    padding:14px 18px;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--border);
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  section.block > header .title {
+    font-size:16px;
+    font-weight:600;
+    color:var(--text-strong);
+  }
+  section.block > header .files {
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+  }
+  .file-pill {
+    background:var(--bg-alt);
+    color:var(--accent-2);
+    border:1px solid var(--border);
+    padding:2px 8px;
+    border-radius:999px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:12px;
+  }
+  .file-pill.deleted { color:var(--red); border-color:var(--danger-border); }
+  .file-pill.new { color:var(--green); border-color:#1f6b34; }
+  .tag {
+    display:inline-block;
+    font-size:11px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    padding:2px 8px;
+    border-radius:4px;
+    border:1px solid transparent;
+  }
+  .tag.core { background:rgba(56,139,253,0.15); color:var(--accent-2); border-color:rgba(56,139,253,0.4); }
+  .tag.new-stage { background:rgba(63,185,80,0.15); color:var(--green); border-color:#1f6b34; }
+  .tag.rename { background:rgba(210,153,34,0.15); color:var(--yellow); border-color:#7a5f10; }
+  .tag.fix { background:rgba(188,140,255,0.15); color:var(--purple); border-color:#6b4aab; }
+  .tag.docs { background:rgba(139,148,158,0.15); color:var(--text-dim); border-color:var(--border-strong); }
+  .tag.tests { background:rgba(56,139,253,0.15); color:var(--accent-2); border-color:rgba(56,139,253,0.4); }
+  .tag.cosmetic { background:rgba(219,143,62,0.15); color:var(--orange); border-color:#7a4b12; }
+
+  .two-col {
+    display:grid;
+    grid-template-columns:minmax(320px,1fr) minmax(420px,1.3fr);
+    gap:0;
+  }
+  .col { padding:18px 20px; }
+  .col.left { border-right:1px solid var(--border); }
+  .col.left h3 {
+    margin:0 0 6px;
+    font-size:13px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.06em;
+    color:var(--text-dim);
+  }
+  .col.left h3:not(:first-child) { margin-top:16px; }
+  .col.left p { margin:0 0 8px; }
+
+  ul.audit {
+    list-style:none;
+    padding:0;
+    margin:6px 0 0;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  ul.audit li {
+    padding:8px 10px;
+    border-left:3px solid var(--border-strong);
+    background:var(--bg-alt);
+    border-radius:0 4px 4px 0;
+  }
+  ul.audit li .label {
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    display:inline-block;
+    margin-right:6px;
+  }
+  li.strong { border-left-color:var(--green); } li.strong .label { color:var(--green); }
+  li.probable { border-left-color:var(--accent); } li.probable .label { color:var(--accent-2); }
+  li.weak { border-left-color:var(--yellow); background:var(--warn-bg); } li.weak .label { color:var(--yellow); }
+  li.unclear { border-left-color:var(--red); background:var(--danger-bg); } li.unclear .label { color:var(--red); }
+
+  pre.code {
+    margin:0;
+    padding:14px 16px;
+    background:var(--bg-alt);
+    border-radius:6px;
+    border:1px solid var(--border);
+    overflow-x:auto;
+    font:12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color:var(--text);
+  }
+  pre.code + .caption,
+  .caption {
+    font-size:12px;
+    color:var(--text-dim);
+    margin:4px 2px 14px;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .code .kw { color:#ff7b72; }
+  .code .str { color:#a5d6ff; }
+  .code .com { color:var(--text-dim); font-style:italic; }
+  .code .fn  { color:#d2a8ff; }
+  .code .var { color:#79c0ff; }
+  .code .num { color:#79c0ff; }
+  .code .meta { color:var(--yellow); }
+
+  .scrutiny ul { margin:4px 0 0 18px; padding:0; }
+  .scrutiny li { margin-bottom:4px; }
+
+  footer.summary {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:22px 28px;
+    margin-top:32px;
+  }
+  footer.summary h2 {
+    margin:0 0 14px;
+    font-size:18px;
+    color:var(--text-strong);
+  }
+  footer.summary h3 {
+    margin:20px 0 6px;
+    font-size:14px;
+    font-weight:600;
+    color:var(--text-strong);
+    border-bottom:1px solid var(--border);
+    padding-bottom:4px;
+  }
+  footer.summary ul { margin:6px 0 0 20px; padding:0; }
+  footer.summary li { margin-bottom:6px; }
+
+  .inline-file {
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    color:var(--accent-2);
+    background:var(--bg-alt);
+    padding:1px 5px;
+    border-radius:3px;
+    font-size:0.92em;
+  }
+
+  @media (max-width: 1100px) {
+    .two-col { grid-template-columns:1fr; }
+    .col.left { border-right:none; border-bottom:1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header class="page">
+  <h1>Semantic Diff Report — SDLC-TEST</h1>
+  <div class="meta">
+    Branch <code>codex/test-claude-ultra-review-20260419-114154</code> &middot;
+    Base <code>main</code> &middot;
+    21 files changed, ~1,170 insertions / ~285 deletions &middot;
+    Commits: <code>c0a06a2</code>, <code>14b9371</code>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================================================== -->
+<!-- BLOCK 1: Runner switch Codex CLI → Claude Code CLI             -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">1. Runner switch: Codex CLI → Claude Code CLI</span>
+      <span class="tag core" style="margin-left:8px">core</span>
+    </div>
+    <div class="files">
+      <span class="file-pill">orchestrator/config.sh</span>
+      <span class="file-pill">orchestrator/lib/execute.sh</span>
+      <span class="file-pill">orchestrator/run-pipeline.sh</span>
+      <span class="file-pill">templates/overrides-template.sh</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Replace the Codex CLI runtime with the Claude Code CLI as the execution engine for every automated step. The orchestrator's shell of <em>argv construction + subprocess piping + summary capture + log tee</em> is preserved; only the invoked CLI, its flags, and the config vocabulary change.</p>
+
+      <h3>Why this change exists</h3>
+      <p>The task description names this explicitly: the pipeline is being re-homed on Claude Code instead of <code>codex</code>. Evidence that this is a deliberate swap rather than dual-support:</p>
+      <ul style="margin:0 0 8px 18px;">
+        <li><code>CODEX_*</code> variables are <em>removed</em>, not shadowed or aliased.</li>
+        <li><code>run_codex_step</code> is <em>renamed</em> (call site in <span class="inline-file">run-pipeline.sh</span> updated to match) rather than wrapped.</li>
+        <li><code>sdlc_require_command</code> now hard-fails if <code>claude</code> is absent, with an install hint pointing at <code>@anthropic-ai/claude-code</code>.</li>
+      </ul>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="strong"><span class="label">Strong</span> Renaming the config block <code>CODEX_*</code>&rarr;<code>CLAUDE_*</code> and dropping <code>CODEX_SANDBOX</code>/<code>CODEX_EPHEMERAL</code>. The underlying concepts (<code>--sandbox</code>, <code>--ephemeral</code>) do not exist on the Claude Code CLI; keeping them would be cargo-cult.</li>
+        <li class="strong"><span class="label">Strong</span> Renaming <code>STEP_SANDBOXES</code>&rarr;<code>STEP_PERMISSION_MODES</code>. The lookup contract (<code>sdlc_lookup_kv "$step_name" "$default"</code>) is preserved and used identically in <span class="inline-file">execute.sh</span>, so per-step overrides keep working under a vocabulary that matches Claude Code.</li>
+        <li class="strong"><span class="label">Strong</span> Swapping the argv from <code>codex exec -C -m -c "model_reasoning_effort=..." --sandbox ... --ephemeral --output-last-message -</code> to <code>claude --print --model --effort --permission-mode --output-format</code>. These are the Claude Code flags that carry the same intent (non-interactive, pinned model, reasoning budget, permission scope, plain-text output).</li>
+        <li class="probable"><span class="label">Probable</span> Wrapping the CLI invocation in a subshell that <code>cd</code>s into <code>$repo_root</code>. Replaces the removed <code>-C "$repo_root"</code> flag. Correct but slightly fragile — see scrutiny.</li>
+        <li class="probable"><span class="label">Probable</span> Adding <code>CLAUDE_EXTRA_ARGS</code> as a space-split override vector (<code>read</code>-less array expansion via word splitting). Future-proofs per-repo flag additions (e.g. <code>--max-turns</code>, <code>--max-budget-usd</code>) without further code changes. The overrides template advertises this.</li>
+        <li class="weak"><span class="label">Weak</span> Keeping <code>CLAUDE_OUTPUT_FORMAT</code> as an overridable env var but hard-coding the assumption "<code>$log_file</code> contains the final assistant message" in the summary-capture step. If a user sets <code>CLAUDE_OUTPUT_FORMAT=stream-json</code>, the summary file becomes machine-parseable JSON, silently breaking Step 9/10 which read it as prose. No guard or test enforces the text-only contract.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code><span class="com"># orchestrator/config.sh — Claude Code CLI defaults</span>
+<span class="com"># Claude Code CLI configuration. Opus 4.7 with xhigh effort is the default.</span>
+<span class="var">CLAUDE_MODEL</span>=<span class="str">"${CLAUDE_MODEL:-claude-opus-4-7}"</span>
+<span class="var">CLAUDE_EFFORT</span>=<span class="str">"${CLAUDE_EFFORT:-xhigh}"</span>
+<span class="var">CLAUDE_PERMISSION_MODE</span>=<span class="str">"${CLAUDE_PERMISSION_MODE:-acceptEdits}"</span>
+<span class="var">CLAUDE_OUTPUT_FORMAT</span>=<span class="str">"${CLAUDE_OUTPUT_FORMAT:-text}"</span>
+<span class="var">CLAUDE_EXTRA_ARGS</span>=<span class="str">"${CLAUDE_EXTRA_ARGS:-}"</span>
+
+<span class="com"># Per-step permission-mode overrides, if needed. Format: "step.md=mode".</span>
+<span class="var">STEP_PERMISSION_MODES</span>=()</code></pre>
+      <div class="caption">orchestrator/config.sh · default model, effort, permission mode</div>
+
+      <pre class="code"><code><span class="com"># orchestrator/lib/execute.sh — core invocation</span>
+<span class="fn">run_claude_step</span>() {
+  <span class="kw">local</span> step_file=<span class="str">"$1"</span> task_file=<span class="str">"$2"</span> context_file=<span class="str">"$3"</span>
+  <span class="kw">local</span> log_file=<span class="str">"$4"</span> summary_file=<span class="str">"$5"</span>
+  <span class="kw">local</span> timeout_seconds=<span class="str">"$6"</span> repo_root=<span class="str">"$7"</span>
+
+  <span class="kw">local</span> permission_mode
+  <span class="kw">local</span> <span class="kw">-a</span> claude_args=()
+  permission_mode=<span class="str">$(sdlc_lookup_kv STEP_PERMISSION_MODES \
+                   "$step_name" "$CLAUDE_PERMISSION_MODE")</span>
+
+  <span class="kw">if</span> [[ <span class="kw">-n</span> <span class="str">"$CLAUDE_EXTRA_ARGS"</span> ]]; <span class="kw">then</span>
+    <span class="com"># shellcheck disable=SC2206</span>
+    <span class="kw">local</span> <span class="kw">-a</span> extra_args=($CLAUDE_EXTRA_ARGS)
+    claude_args+=(<span class="str">"${extra_args[@]}"</span>)
+  <span class="kw">fi</span>
+
+  <span class="com"># ... prompt assembly unchanged ...</span>
+
+  <span class="fn">sdlc_log</span> <span class="str">"INFO"</span> <span class="str">"Model: $CLAUDE_MODEL | Effort: $CLAUDE_EFFORT | Permission mode: $permission_mode"</span>
+
+  <span class="kw">set</span> +e
+  (
+    <span class="kw">cd</span> <span class="str">"$repo_root"</span>
+    <span class="fn">printf</span> <span class="str">'%s'</span> <span class="str">"$full_prompt"</span> | <span class="fn">sdlc_run_with_timeout</span> <span class="str">"$timeout_seconds"</span> \
+      claude \
+        --print \
+        --model <span class="str">"$CLAUDE_MODEL"</span> \
+        --effort <span class="str">"$CLAUDE_EFFORT"</span> \
+        --permission-mode <span class="str">"$permission_mode"</span> \
+        --output-format <span class="str">"$CLAUDE_OUTPUT_FORMAT"</span> \
+        <span class="str">${claude_args[@]+"${claude_args[@]}"}</span> \
+        2&gt;&amp;1 | <span class="fn">tee</span> <span class="str">"$log_file"</span>
+    <span class="com"># claude is PIPESTATUS[1]; PIPESTATUS[0] is always printf's success</span>
+    <span class="kw">exit</span> <span class="str">"${PIPESTATUS[1]}"</span>
+  )
+  <span class="kw">local</span> exit_code=$?
+  <span class="kw">set</span> -e
+
+  <span class="com"># --print streams the last assistant message to stdout, which we tee'd.</span>
+  <span class="kw">if</span> [[ <span class="kw">-s</span> <span class="str">"$log_file"</span> ]]; <span class="kw">then</span>
+    <span class="fn">cp</span> <span class="str">"$log_file"</span> <span class="str">"$summary_file"</span>
+  <span class="kw">fi</span>
+
+  <span class="kw">return</span> <span class="str">"$exit_code"</span>
+}</code></pre>
+      <div class="caption">orchestrator/lib/execute.sh · runner body</div>
+
+      <pre class="code"><code><span class="com"># orchestrator/run-pipeline.sh — prerequisite + call site</span>
+<span class="fn">sdlc_require_command</span> <span class="str">"claude"</span> \
+  <span class="str">"Install it first: npm install -g @anthropic-ai/claude-code"</span>
+
+<span class="com"># ...</span>
+<span class="fn">run_claude_step</span> \
+  <span class="str">"$step_file"</span> \
+  <span class="str">"$TASK_FILE"</span> \
+  <span class="str">"$CONTEXT_FILE"</span> \
+  <span class="str">"$STEP_LOG_FILE"</span> \
+  <span class="str">"$STEP_SUMMARY_FILE"</span> \
+  <span class="str">"$timeout_seconds"</span> \
+  <span class="str">"$REPO_ROOT"</span></code></pre>
+      <div class="caption">orchestrator/run-pipeline.sh · command gate &amp; call site rename</div>
+    </div>
+  </div>
+  <div class="col" style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface-2)">
+    <h3 style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dim)">Behavioral impact</h3>
+    <ul style="margin:0 0 0 18px;padding:0">
+      <li>Hard prerequisite changes: the pipeline now requires <code>claude</code> on PATH. Any target repo that had <code>codex</code> but not <code>claude</code> will now fail at the prereq gate.</li>
+      <li>Default sandboxing model changes meaning: <code>--full-auto</code> (Codex) is replaced by <code>--permission-mode acceptEdits</code> (Claude). The semantics differ — Claude's permission model is about <em>what tool calls require prompts</em>, not a sandbox directory; reviewers should confirm <code>acceptEdits</code> is the right default for every step (Step 9, semantic diff, is read-mostly — consider tightening).</li>
+      <li>Summary file contents change: previously <code>--output-last-message</code> wrote <em>only</em> the final assistant message; now <code>cp $log_file $summary_file</code> writes <em>everything tee'd</em>, which in text mode happens to also be the last assistant message, but will diverge if someone enables a verbose output format. Downstream <code>update_context</code> consumes this file.</li>
+      <li>Working directory behavior: the subshell <code>cd $repo_root</code> replaces <code>codex exec -C</code>. Because the subshell still executes <em>after</em> <code>set +e</code> returns from the pipeline, and the subshell's own <code>exit</code> is what the parent reads, the retry loop still sees the claude exit code correctly.</li>
+    </ul>
+    <h3 style="margin:14px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dim)">Reviewer scrutiny</h3>
+    <div class="scrutiny">
+      <ul>
+        <li><strong>Does <code>--print</code> + <code>--output-format text</code> really emit only the last assistant message?</strong> If it emits tool-call traces or progress text, <code>$summary_file</code> becomes noisy and <code>update_context</code> will propagate that noise to the next step's prompt. No assertion in tests pins this down.</li>
+        <li><strong><code>CLAUDE_EXTRA_ARGS</code> word-splitting</strong> uses bare <code>$CLAUDE_EXTRA_ARGS</code> inside <code>(...)</code>. Values containing spaces inside quotes (e.g., <code>--system-prompt "hello world"</code>) will be split. Document as a known limitation or move to an array-valued override.</li>
+        <li><strong>Permission-mode validation.</strong> <code>sdlc_lookup_kv</code> returns whatever string the overrides file supplies. A typo like <code>acceptEdit</code> will be passed straight through to <code>claude</code>, which will fail late. Consider a whitelist.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- BLOCK 2: New Step 11 ultra-review stage                        -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">2. New Step 11: <code>/ultrareview</code> pass</span>
+      <span class="tag new-stage" style="margin-left:8px">new stage</span>
+    </div>
+    <div class="files">
+      <span class="file-pill new">11-ultra-review.md</span>
+      <span class="file-pill">orchestrator/config.sh</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Insert a dedicated review pass between weak-change cleanup (Step 10) and push (new Step 12). Step 11 runs Claude Code's <code>/ultrareview</code> slash command against the branch, captures findings verbatim into a canonical artifact, and forces an explicit triage decision (fix / defer / reject) on every finding.</p>
+
+      <h3>Why this change exists</h3>
+      <p>The task description names this as a first-class deliverable. Placement is deliberate: Step 9 produces a <em>semantic</em> diff report; Step 10 cleans up weak changes against that report. <code>/ultrareview</code> is a second independent pass that catches bugs and design issues the semantic diff wouldn't flag (e.g., off-by-one, incorrect invariants, contract violations). Running it <em>after</em> Step 10's cleanup means the reviewer sees the remediated code, not intermediate state.</p>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="strong"><span class="label">Strong</span> Canonical artifact at <code>.sdlc/artifacts/ultra-review.md</code> is registered in <code>STEP_REQUIRED_PATTERNS</code>, so the validator treats a missing artifact as a blocked step. This gives the ultra-review stage the same "no silent skips" contract as Step 7/9/10 artifacts.</li>
+        <li class="strong"><span class="label">Strong</span> Mandatory <code>## Actions</code> section with <em>fix / defer / reject + rationale</em>. Without this, <code>/ultrareview</code> becomes advisory; with it, the pipeline cannot silently drop findings.</li>
+        <li class="strong"><span class="label">Strong</span> <code>STEP_TIMEOUTS</code> entry of 3600s and <code>STEP_RETRY_COUNTS</code> of 2. The 60-minute timeout matches the Step 10 precedent; 2 retries prevents a flaky network from burning the run.</li>
+        <li class="probable"><span class="label">Probable</span> Step 11 triggers a full-suite re-run (delegating to Step 6) after applied fixes. Correct — any accepted fix can regress tests — but step text says "re-run the test suite (Step 6)" without a concrete command or gate. Relies on the acting model to remember.</li>
+        <li class="weak"><span class="label">Weak</span> Commit-format guidance <code>fix(&lt;scope&gt;): address ultra-review findings</code> is prescribed with no example scope. Inconsistent with Step 10's more flexible guidance.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code><span class="meta"># Step 11 — Ultra Review</span>
+
+<span class="meta">**Mode:**</span> Automated
+<span class="meta">**Objective:**</span> Run a dedicated review session that reads through the
+branch changes and flags bugs and design issues a careful reviewer would catch.
+
+<span class="meta">## Inputs</span>
+- Current feature branch diff against `main`
+- `.sdlc/reports/semantic_diff_report_&lt;ticket-id&gt;.html` from Step 9
+- `.sdlc/artifacts/semantic-review-actions.md` from Step 10
+- Canonical output file: `.sdlc/artifacts/ultra-review.md`
+
+<span class="meta">## Procedure</span>
+
+1. Invoke Claude Code's `/ultrareview` slash command:
+   ```
+   claude -p "/ultrareview" --permission-mode acceptEdits
+   ```
+
+2. Capture the review output verbatim at
+   `.sdlc/artifacts/ultra-review.md`. Preserve the finding structure
+   (severity, file, location, explanation).
+
+3. Triage every finding:
+   - **Fix:** Apply the code change now.
+   - **Defer:** Out of scope; open a follow-up ticket.
+   - **Reject:** Not a real issue; record rationale in one sentence.
+
+4. Append triage decisions under a `## Actions` section.
+5. Apply accepted fixes in a single commit:
+   `fix(&lt;scope&gt;): address ultra-review findings`
+6. Re-run the test suite (Step 6) to confirm no regressions.</code></pre>
+      <div class="caption">11-ultra-review.md · step contract (excerpt)</div>
+
+      <pre class="code"><code><span class="com"># orchestrator/config.sh — register the new stage</span>
+<span class="var">STEP_TIMEOUTS</span>=(
+  <span class="com"># ...</span>
+  <span class="str">"10-address-findings.md=3600"</span>
+  <span class="str">"11-ultra-review.md=3600"</span>
+  <span class="str">"12-push-and-hooks.md=1800"</span>
+  <span class="str">"13-fix-ci.md=5400"</span>
+  <span class="str">"14-rebase.md=2400"</span>
+)
+
+<span class="var">STEP_RETRY_COUNTS</span>=(
+  <span class="com"># ...</span>
+  <span class="str">"10-address-findings.md=3"</span>
+  <span class="str">"11-ultra-review.md=2"</span>
+  <span class="str">"13-fix-ci.md=3"</span>
+)
+
+<span class="var">STEP_REQUIRED_PATTERNS</span>=(
+  <span class="com"># ...</span>
+  <span class="str">"10-address-findings.md=.sdlc/artifacts/semantic-review-actions.md"</span>
+  <span class="str">"11-ultra-review.md=.sdlc/artifacts/ultra-review.md"</span>
+)</code></pre>
+      <div class="caption">orchestrator/config.sh · timeout, retry, and required-artifact rows</div>
+    </div>
+  </div>
+  <div class="col" style="padding:16px 20px;border-top:1px solid var(--border);background:var(--surface-2)">
+    <h3 style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dim)">Behavioral impact</h3>
+    <ul style="margin:0 0 0 18px;padding:0">
+      <li>Wall-clock budget grows by up to 60 minutes per run (3600s timeout). Retries add up to 2&times; that in worst case.</li>
+      <li>The pipeline now fails validation if <code>.sdlc/artifacts/ultra-review.md</code> is missing. This is intentional — see <code>STEP_REQUIRED_PATTERNS</code>.</li>
+      <li>Because Step 11 may commit fixes on its own, the diff seen by Step 12 (push) can be larger than what Step 10 produced. Downstream CI/review reads include ultra-review commits.</li>
+    </ul>
+    <h3 style="margin:14px 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-dim)">Reviewer scrutiny</h3>
+    <div class="scrutiny">
+      <ul>
+        <li><strong>Is <code>/ultrareview</code> guaranteed to exist on the Claude Code CLI?</strong> If the slash command is user-scoped or project-scoped and not present in a fresh install, Step 11 fails loudly — good — but the failure mode is not called out in the step text. Add a precondition check or call out the install requirement.</li>
+        <li><strong>The required-pattern check</strong> only asserts the file exists and is non-empty. It does not verify the `## Actions` section is present. A model that wrote the findings but skipped triage would pass the validator.</li>
+        <li><strong>Nested step delegation</strong> ("Re-run the test suite (Step 6)") is an informal reference; the orchestrator does not re-invoke Step 6 automatically. Verify that the Step 11 runner actually runs tests and fails the step if they fail.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- BLOCK 3: Downstream step renumbering                            -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">3. Downstream step renumbering (11&rarr;12, 12&rarr;13, 13&rarr;14, 14&rarr;15, 15&rarr;16)</span>
+      <span class="tag rename" style="margin-left:8px">rename</span>
+    </div>
+    <div class="files">
+      <span class="file-pill">12-push-and-hooks.md</span>
+      <span class="file-pill">13-fix-ci.md</span>
+      <span class="file-pill">14-rebase.md</span>
+      <span class="file-pill">15-merge.md</span>
+      <span class="file-pill">16-cleanup.md</span>
+      <span class="file-pill">orchestrator/config.sh</span>
+      <span class="file-pill">templates/overrides-template.sh</span>
+      <span class="file-pill">README.md</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Push every step numbered 11 or higher up by one to make room for the new ultra-review stage, and update every place that referenced the old numbers by name.</p>
+
+      <h3>Why this change exists</h3>
+      <p>Forced by Block 2. Step files are discovered by glob and ordered lexicographically, so inserting a new Step 11 without renumbering would sort it <em>after</em> the existing <code>11-push-and-hooks.md</code> and break the intended ordering.</p>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="strong"><span class="label">Strong</span> Renaming the five step files with <code>git mv</code> preserves history (similarity indexes 91–99% in the diff).</li>
+        <li class="strong"><span class="label">Strong</span> Updating <code>STEP_TIMEOUTS</code> and <code>STEP_RETRY_COUNTS</code> keys in <span class="inline-file">config.sh</span>. The lookup is keyed on filename, so stale keys would silently fall back to defaults. Correctly addressed.</li>
+        <li class="strong"><span class="label">Strong</span> Updating the internal cross-reference <em>"Wait for CI to pass (Step 12)"</em> &rarr; <em>"Step 13"</em> inside <span class="inline-file">14-rebase.md</span>. Missing this would have left a dangling reference.</li>
+        <li class="probable"><span class="label">Probable</span> Updating the <code>SKIP_STEPS</code> example in <span class="inline-file">overrides-template.sh</span> from <code>("14-merge.md" "15-cleanup.md")</code> to <code>("15-merge.md" "16-cleanup.md")</code>. The line is commented-out guidance, but keeping it accurate avoids user confusion.</li>
+        <li class="weak"><span class="label">Weak</span> README numbering updates go well beyond what's strictly required (whole paragraphs reworded for style, not just numbers). Not incorrect, but bundled with Block 5; see that block for its own audit.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code><span class="com"># orchestrator/config.sh — renumbered keys</span>
+<span class="var">STEP_TIMEOUTS</span>=(
+  <span class="com"># ...</span>
+  <span class="str">"11-ultra-review.md=3600"</span>
+  <span class="str">"12-push-and-hooks.md=1800"</span>
+  <span class="str">"13-fix-ci.md=5400"</span>
+  <span class="str">"14-rebase.md=2400"</span>
+)
+
+<span class="var">STEP_RETRY_COUNTS</span>=(
+  <span class="com"># ...</span>
+  <span class="str">"13-fix-ci.md=3"</span>
+)</code></pre>
+      <div class="caption">orchestrator/config.sh</div>
+
+      <pre class="code"><code><span class="meta"># 14-rebase.md — internal cross-reference updated</span>
+
+7. <span class="meta">**Verify on GitHub:**</span>
+   - The PR diff is clean and conflict-free.
+   - CI has been re-triggered on the rebased branch.
+   - Wait for CI to pass (Step 13).</code></pre>
+      <div class="caption">14-rebase.md · step cross-ref renumber</div>
+
+      <pre class="code"><code><span class="com"># templates/overrides-template.sh</span>
+<span class="com"># Example: skip manual checklist steps during automated execution (default).</span>
+<span class="com"># SKIP_STEPS=("15-merge.md" "16-cleanup.md")</span></code></pre>
+      <div class="caption">templates/overrides-template.sh · skip-list example</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- BLOCK 4: PIPESTATUS correctness, clarified                     -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">4. PIPESTATUS index made explicit (execute.sh)</span>
+      <span class="tag fix" style="margin-left:8px">correctness</span>
+    </div>
+    <div class="files">
+      <span class="file-pill">orchestrator/lib/execute.sh</span>
+      <span class="file-pill">tests/execute_integration_test.sh</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Make sure the runner returns the <em>Claude CLI's</em> exit code — not the always-zero <code>printf</code> that feeds its stdin — so the retry loop in <code>run-pipeline.sh</code> sees real failures.</p>
+
+      <h3>Why this change exists</h3>
+      <p>The pipeline is <code>printf ... | sdlc_run_with_timeout claude ... | tee</code>. <code>PIPESTATUS[0]</code> is printf (always 0), <code>PIPESTATUS[1]</code> is claude, <code>PIPESTATUS[2]</code> is tee. The pre-existing Codex code correctly used <code>${pipe_status[1]}</code>. During the runner rewrite, an intermediate draft (caught in Step 05 testing) used <code>PIPESTATUS[0]</code>, which would have silently hidden every Claude failure and timeout. The committed code now uses <code>PIPESTATUS[1]</code> with an inline comment pinning the invariant.</p>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="strong"><span class="label">Strong</span> Inline comment <em>"claude is PIPESTATUS[1]; PIPESTATUS[0] is always printf's success"</em> captures the invariant so a future pipeline reshuffle can't silently regress it.</li>
+        <li class="strong"><span class="label">Strong</span> The subshell <code>(cd $repo_root; ... ; exit "${PIPESTATUS[1]}")</code> decouples PIPESTATUS handling from the outer retry loop, making <code>local exit_code=$?</code> unambiguously the claude exit code.</li>
+        <li class="strong"><span class="label">Strong</span> New integration test <em>"run_claude_step propagates claude exit code"</em> in <span class="inline-file">execute_integration_test.sh</span> stubs a non-zero <code>claude</code> and asserts the function returns non-zero. Pins the invariant against accidental regressions of PIPESTATUS index.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code>(
+  <span class="kw">cd</span> <span class="str">"$repo_root"</span>
+  <span class="fn">printf</span> <span class="str">'%s'</span> <span class="str">"$full_prompt"</span> | <span class="fn">sdlc_run_with_timeout</span> <span class="str">"$timeout_seconds"</span> \
+    claude \
+      --print \
+      --model <span class="str">"$CLAUDE_MODEL"</span> \
+      --effort <span class="str">"$CLAUDE_EFFORT"</span> \
+      --permission-mode <span class="str">"$permission_mode"</span> \
+      --output-format <span class="str">"$CLAUDE_OUTPUT_FORMAT"</span> \
+      <span class="str">${claude_args[@]+"${claude_args[@]}"}</span> \
+      2&gt;&amp;1 | <span class="fn">tee</span> <span class="str">"$log_file"</span>
+  <span class="com"># Pipeline is: printf | sdlc_run_with_timeout claude ... | tee. The claude</span>
+  <span class="com"># (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0] is always</span>
+  <span class="com"># printf's success and would mask real failures from the retry loop.</span>
+  <span class="kw">exit</span> <span class="str">"${PIPESTATUS[1]}"</span>
+)
+<span class="kw">local</span> exit_code=$?
+<span class="kw">set</span> -e</code></pre>
+      <div class="caption">orchestrator/lib/execute.sh · PIPESTATUS[1] with invariant comment</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- BLOCK 5: README + guide rewrite                                -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">5. README rewritten &amp; legacy guide deleted</span>
+      <span class="tag docs" style="margin-left:8px">docs</span>
+    </div>
+    <div class="files">
+      <span class="file-pill">README.md</span>
+      <span class="file-pill deleted">orchestrating-ai-agents-sdlc-guide.md</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Bring user-facing docs in line with the Claude-based 16-step flow and remove the predecessor "review aligned" guide whose content is now either obsolete (Codex CLI flags verified on 2026-04-12) or duplicative of the README.</p>
+
+      <h3>Why this change exists</h3>
+      <p>The old guide had a <em>"Verified Codex CLI assumptions"</em> section that is now dead knowledge. Leaving it in the repo would invite users to follow commands that the orchestrator no longer runs. The README is the authoritative user-facing doc and was updated to name Claude Code, list the 16 steps, document the new artifact, and show the <code>sdlc-status</code> helper.</p>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="strong"><span class="label">Strong</span> Deleting <span class="inline-file">orchestrating-ai-agents-sdlc-guide.md</span>. Its Codex-specific content would mislead any reader landing there post-switch.</li>
+        <li class="strong"><span class="label">Strong</span> README lifecycle numbering updated to 16 steps and step 11 ultra-review called out; target-repo contract names <code>.sdlc/artifacts/ultra-review.md</code>.</li>
+        <li class="probable"><span class="label">Probable</span> New <em>"Prerequisites"</em> and <em>"Default model configuration"</em> sections. Useful onboarding info; tightly coupled to Block 1.</li>
+        <li class="weak"><span class="label">Weak</span> Extensive prose rewording that is not driven by the runner switch (e.g., "This repository is now a runnable SDLC package, not just a set of markdown prompts" &rarr; "A runnable SDLC package driven by the Claude Code CLI"). The old phrasing was not incorrect. This is stylistic churn bundled into a content-driven change.</li>
+        <li class="weak"><span class="label">Weak</span> Replacing the bullet list symbols (hyphens to em-dashes in some places) across the target-repo contract. Stylistic only.</li>
+        <li class="weak"><span class="label">Weak</span> Relocating the shell-alias snippet from a trailing example to the "Quick start" preamble. Helpful for readers but not semantically required.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code><span class="meta"># AI-Governed SDLC Pipeline</span>
+
+A runnable SDLC package driven by the Claude Code CLI.
+
+<span class="meta">## Prerequisites</span>
+- `claude` CLI installed: `npm install -g @anthropic-ai/claude-code`
+- Claude Code authenticated locally (`claude auth`)
+- A git repository to govern
+
+<span class="meta">## Default model configuration</span>
+
+The orchestrator invokes Claude Code in headless mode (`claude -p`) with:
+
+- Model: `claude-opus-4-7`
+- Effort: `xhigh`
+- Permission mode: `acceptEdits`
+
+Override any of these per-repo in `.sdlc/overrides.sh`
+(see `templates/overrides-template.sh`).
+
+<span class="meta">## Target repo contract</span>
+
+- `.sdlc/artifacts/ultra-review.md` — `/ultrareview` findings and
+  triage produced by Step 11</code></pre>
+      <div class="caption">README.md · new prereq, defaults, and ultra-review row (excerpts)</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- BLOCK 6: Test suite expansion                                  -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">6. Test coverage for Claude runner &amp; pipeline driver</span>
+      <span class="tag tests" style="margin-left:8px">tests</span>
+    </div>
+    <div class="files">
+      <span class="file-pill new">tests/common_unit_test.sh</span>
+      <span class="file-pill new">tests/config_unit_test.sh</span>
+      <span class="file-pill new">tests/context_unit_test.sh</span>
+      <span class="file-pill new">tests/validate_unit_test.sh</span>
+      <span class="file-pill new">tests/execute_integration_test.sh</span>
+      <span class="file-pill new">tests/pipeline_integration_test.sh</span>
+      <span class="file-pill">tests/run.sh</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Cover every orchestrator module touched by this branch (Claude runner, config defaults for the new runner, validator, context accumulator, pipeline driver) so the runner-switch behavior is locked in by tests rather than assumed.</p>
+
+      <h3>Why this change exists</h3>
+      <p>The branch swaps the execution engine and inserts a new stage. Without tests, a future refactor or overrides-file change could silently regress the runner's argv, timeout contract, or required-pattern validation. Integration coverage for <code>run-pipeline.sh --dry-run</code> also pins the run plan (01&rarr;14 auto, 15&rarr;16 manual).</p>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="strong"><span class="label">Strong</span> <span class="inline-file">execute_integration_test.sh</span> stubs <code>claude</code> on PATH and asserts argv order, <code>--permission-mode</code> per-step override, <code>CLAUDE_EXTRA_ARGS</code> forwarding, stdin prompt, and exit-code propagation. Directly pins Block 1's contract.</li>
+        <li class="strong"><span class="label">Strong</span> <span class="inline-file">config_unit_test.sh</span> asserts the new Step 11 entries are present in <code>STEP_TIMEOUTS</code>, <code>STEP_RETRY_COUNTS</code>, and <code>STEP_REQUIRED_PATTERNS</code>. Pins Block 2's contract.</li>
+        <li class="strong"><span class="label">Strong</span> <span class="inline-file">validate_unit_test.sh</span> covers the ultra-review artifact requirement with a dedicated case. Ensures the required-pattern check is exercised end-to-end.</li>
+        <li class="strong"><span class="label">Strong</span> <span class="inline-file">pipeline_integration_test.sh</span> verifies dry-run plan composition, <code>--include-manual</code>, <code>--only</code>, <code>--start-from</code>, and overrides-file sourcing. Catches ordering regressions that could otherwise only surface in a live run.</li>
+        <li class="probable"><span class="label">Probable</span> <span class="inline-file">context_unit_test.sh</span> on <code>update_context</code> (append / placeholder / 24KB truncation). Not branch-introduced behavior but strictly useful safety net.</li>
+        <li class="weak"><span class="label">Weak</span> <span class="inline-file">common_unit_test.sh</span> covers <code>sdlc_lookup_kv</code> and <code>sdlc_git_has_non_log_changes</code>, which are pre-existing helpers not modified on this branch. Coverage is welcome but classifies as opportunistic rather than scoped to the task.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code><span class="com"># tests/run.sh — test files registered</span>
+bash <span class="str">"$TESTS_DIR/common_unit_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/config_unit_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/context_unit_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/validate_unit_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/status_unit_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/execute_integration_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/pipeline_integration_test.sh"</span>
+bash <span class="str">"$TESTS_DIR/status_integration_test.sh"</span></code></pre>
+      <div class="caption">tests/run.sh · unified entry point</div>
+
+      <pre class="code"><code><span class="com"># tests/execute_integration_test.sh — argv pinning (excerpt)</span>
+<span class="fn">write_claude_stub</span>() {
+  <span class="kw">local</span> args_file=<span class="str">"$1"</span> stdin_file=<span class="str">"$2"</span> exit_code=<span class="str">"$3"</span>
+  <span class="com"># Stub records argv + stdin; prints a READY response.</span>
+  <span class="fn">cat</span> &lt;&lt;STUB &gt; <span class="str">"$FAKE_BIN/claude"</span>
+#!/usr/bin/env bash
+<span class="fn">printf</span> <span class="str">'%s\n'</span> <span class="str">"\$@"</span> &gt; <span class="str">"$args_file"</span>
+<span class="fn">cat</span> &gt; <span class="str">"$stdin_file"</span>
+<span class="fn">echo</span> <span class="str">"Status: READY"</span>
+<span class="kw">exit</span> $exit_code
+STUB
+  <span class="fn">chmod</span> +x <span class="str">"$FAKE_BIN/claude"</span>
+}</code></pre>
+      <div class="caption">tests/execute_integration_test.sh · stub contract</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- BLOCK 7: Branch name depersonalization                         -->
+<!-- ============================================================== -->
+<section class="block">
+  <header>
+    <div>
+      <span class="title">7. Branch-name de-personalization (<code>marek/</code> &rarr; <code>name/</code>)</span>
+      <span class="tag cosmetic" style="margin-left:8px">cosmetic / out-of-scope</span>
+    </div>
+    <div class="files">
+      <span class="file-pill">01-branch-setup.md</span>
+      <span class="file-pill">07-open-pr.md</span>
+      <span class="file-pill">12-push-and-hooks.md</span>
+      <span class="file-pill">14-rebase.md</span>
+      <span class="file-pill">15-merge.md</span>
+      <span class="file-pill">16-cleanup.md</span>
+    </div>
+  </header>
+  <div class="two-col">
+    <div class="col left">
+      <h3>Objective</h3>
+      <p>Replace the example branch prefix <code>marek/my-fix-branch</code> with the generic <code>name/my-fix-branch</code> across step instructions so the documentation isn't keyed to one contributor's GitHub handle.</p>
+
+      <h3>Why this change exists</h3>
+      <p>Not stated in the task. Most likely opportunistic cleanup done while renumbering the steps (several of the renamed files also happened to contain the old example). Reasonable in isolation, but <strong>not</strong> part of the Claude-runner switch or ultra-review addition.</p>
+
+      <h3>Justification audit</h3>
+      <ul class="audit">
+        <li class="weak"><span class="label">Weak</span> Every <code>marek/my-fix-branch</code> &rarr; <code>name/my-fix-branch</code> occurrence. Harmless, but bundled with an already-large PR. A reviewer following the PR's Risks section expecting "runner switch + ultra-review + renumber" will be mildly surprised by these.</li>
+        <li class="unclear"><span class="label">Unclear</span> <code>name/my-fix-branch</code> is still a placeholder-shaped example but arguably invites users to run it literally. A clearer value would be <code>&lt;handle&gt;/my-fix-branch</code> or <code>username/my-fix-branch</code>.</li>
+      </ul>
+    </div>
+    <div class="col right">
+      <pre class="code"><code><span class="meta"># 01-branch-setup.md — example branch name</span>
+- Branch name (e.g. `name/my-fix-branch`)
+
+<span class="com"># ...</span>
+
+```
+git checkout -b name/my-fix-branch
+```
+
+```
+git push -u origin name/my-fix-branch
+```
+
+```
+git worktree add ../worktrees/my-fix-branch name/my-fix-branch
+cd ../worktrees/my-fix-branch
+```</code></pre>
+      <div class="caption">01-branch-setup.md · example commands (new values)</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================== -->
+<!-- Summary                                                         -->
+<!-- ============================================================== -->
+<footer class="summary">
+  <h2>PR-level summary</h2>
+
+  <h3>Overall PR objective</h3>
+  <p>Validate that the SDLC pipeline can be re-homed on the Claude Code CLI and extended with a mandatory <code>/ultrareview</code> pass, without losing correctness of the retry/validation plumbing and without breaking downstream numbering.</p>
+
+  <h3>Potentially superfluous changes</h3>
+  <ul>
+    <li><strong>Block 7 — Branch-name rename.</strong> Cosmetic and unrelated to the task. Could have been split off.</li>
+    <li><strong>Block 5 — Bullet/prose re-wording in README beyond the Claude-specific edits.</strong> Style-only.</li>
+    <li><strong>Block 6 — <code>common_unit_test.sh</code>.</strong> Covers helpers not modified on this branch; opportunistic.</li>
+  </ul>
+
+  <h3>Changes that need author explanation</h3>
+  <ul>
+    <li><strong>Default permission mode <code>acceptEdits</code> for every step</strong> (Block 1). Is that the right default for read-mostly steps like 09 (semantic diff)? Consider a tighter per-step override for steps that should not write files.</li>
+    <li><strong>Summary-capture model</strong> (Block 1). Now <code>cp $log_file $summary_file</code> instead of a dedicated "last message only" flag. Why is this equivalent under <code>--output-format text</code>, and what happens if a user overrides the output format?</li>
+    <li><strong>Missing assertion on the <code>## Actions</code> section of <code>ultra-review.md</code></strong> (Block 2). The required-pattern check is file-existence only — was that intentional?</li>
+    <li><strong><code>CLAUDE_EXTRA_ARGS</code> word-splitting</strong> (Block 1). Any plan to migrate to an array-valued override, or is a single flat string considered sufficient?</li>
+    <li><strong>Branch rename</strong> (Block 7). Was this a deliberate depersonalization, or was it scooped up incidentally while renumbering?</li>
+  </ul>
+
+  <h3>Missing or weak test coverage</h3>
+  <ul>
+    <li>No test asserts that <code>--output-format text</code> is the only format that makes the log-file-as-summary approach safe. A test that runs with a non-text format and verifies failure (or explicit silencing) would pin Block 1's hidden contract.</li>
+    <li>No test verifies that Step 11 fails validation when <code>.sdlc/artifacts/ultra-review.md</code> is present but missing an <code>## Actions</code> section — because the validator does not check that today.</li>
+    <li>No test for <code>CLAUDE_EXTRA_ARGS</code> containing quoted whitespace (expected to fail today, but silently).</li>
+    <li>No live end-to-end run against a real <code>claude</code> binary — everything is stubbed. Acceptable for this validation PR, but worth calling out.</li>
+  </ul>
+
+  <h3>Reviewer questions</h3>
+  <ul>
+    <li>Should <code>STEP_PERMISSION_MODES</code> ship with <code>09-semantic-diff-report.md=plan</code> out of the box, since that step is read-only?</li>
+    <li>Is the intent for Step 11 to commit fixes directly, or to stage them for Step 12 (push)? The step text says "apply the accepted fixes in a single commit," but the downstream numbering suggests the push step does the pushing.</li>
+    <li>What failure mode is expected if <code>/ultrareview</code> is not installed in the user's Claude Code environment? Currently the step will fail late with a generic CLI error.</li>
+    <li>Is the repo-level <code>CLAUDE_OUTPUT_FORMAT</code> override useful enough to keep given the summary-capture contract's implicit dependence on <code>text</code>?</li>
+    <li>Should the branch-name rename (Block 7) be split into its own PR, or is it intentionally bundled here?</li>
+  </ul>
+</footer>
+
+</main>
+</body>
+</html>
