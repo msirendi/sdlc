@@ -96,7 +96,10 @@ EOF
         --output-format "$CLAUDE_OUTPUT_FORMAT" \
         ${claude_args[@]+"${claude_args[@]}"} \
         2>&1 | tee "$log_file"
-    exit "${PIPESTATUS[0]}"
+    # Pipeline is: printf | sdlc_run_with_timeout claude ... | tee. The claude
+    # (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0] is always
+    # printf's success and would mask real failures from the retry loop.
+    exit "${PIPESTATUS[1]}"
   )
   local exit_code=$?
   set -e
