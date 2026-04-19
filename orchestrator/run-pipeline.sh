@@ -26,7 +26,7 @@ Options:
   --start-from STEP.md  Start execution from a specific step filename
   --only STEP.md        Execute exactly one step filename
   --include-manual      Include manual checklist steps in the run plan
-  --dry-run             Print the execution plan without launching Codex
+  --dry-run             Print the execution plan without launching Claude Code
   -h, --help            Show this help text
 EOF
 }
@@ -87,7 +87,7 @@ if [[ -f "$REPO_ROOT/.sdlc/overrides.sh" ]]; then
   source "$REPO_ROOT/.sdlc/overrides.sh"
 fi
 
-sdlc_require_command "codex" "Install it first: npm install -g @openai/codex"
+sdlc_require_command "claude" "Install it first: npm install -g @anthropic-ai/claude-code"
 
 STEP_FILES=()
 while IFS= read -r step_file; do
@@ -190,7 +190,7 @@ for step_file in "${FILTERED_STEPS[@]}"; do
 done
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  sdlc_log "INFO" "Dry run requested. No Codex steps were executed."
+  sdlc_log "INFO" "Dry run requested. No Claude Code steps were executed."
   if [[ ${#SKIPPED_MANUAL_STEPS[@]} -gt 0 ]]; then
     sdlc_log "INFO" "Manual checklist steps remain: ${SKIPPED_MANUAL_STEPS[*]}"
   fi
@@ -219,7 +219,7 @@ for step_file in "${FILTERED_STEPS[@]}"; do
 
     sdlc_log "INFO" "Attempt $attempt/$max_retries"
     set +e
-    run_codex_step \
+    run_claude_step \
       "$step_file" \
       "$TASK_FILE" \
       "$CONTEXT_FILE" \

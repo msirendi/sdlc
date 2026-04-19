@@ -7,10 +7,14 @@
 # STEP_TIMEOUTS+=("03-implement.md=10800")
 
 # Example: skip manual checklist steps during automated execution (default).
-# SKIP_STEPS=("14-merge.md" "15-cleanup.md")
+# SKIP_STEPS=("15-merge.md" "16-cleanup.md")
 
-# Example: run with a different sandbox profile.
-# STEP_SANDBOXES+=("09-semantic-diff-report.md=--sandbox workspace-write")
+# Example: pin a different Claude model or effort level.
+# CLAUDE_MODEL="claude-opus-4-7"
+# CLAUDE_EFFORT="xhigh"
 
-# Example: disable ephemeral sessions if you want local Codex session files.
-# CODEX_EPHEMERAL="false"
+# Example: tighten the permission mode for a specific step.
+# STEP_PERMISSION_MODES+=("09-semantic-diff-report.md=plan")
+
+# Example: pass additional Claude CLI flags (space-separated).
+# CLAUDE_EXTRA_ARGS="--max-budget-usd 10.00 --fallback-model claude-sonnet-4-6"

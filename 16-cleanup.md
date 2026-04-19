@@ -1,11 +1,11 @@
-# Step 15 — Cleanup: Delete Local Branch and Worktree (Manual)
+# Step 16 — Cleanup: Delete Local Branch and Worktree (Manual)
 
 **Mode:** Manual
 **Objective:** Remove local development artifacts after the change has been safely merged.
 
 ## Inputs
 
-- Local feature branch (e.g. `marek/my-fix-branch`)
+- Local feature branch (e.g. `<handle>/my-fix-branch`)
 - Local worktree created for the feature branch
 - Confirmation that the merged remote state is authoritative
 
@@ -37,13 +37,13 @@
 
 4. **Delete the local feature branch:**
    ```
-   git branch -D marek/my-fix-branch
+   git branch -D <handle>/my-fix-branch
    ```
    Use `-D` only after confirming the branch was merged on GitHub. Squash merges do not always make the branch appear "fully merged" to local git history.
 
 5. **Optionally delete the remote branch** if GitHub did not auto-delete it on merge:
    ```
-   git push origin --delete marek/my-fix-branch
+   git push origin --delete <handle>/my-fix-branch
    ```
 
 6. **Pull latest `main`** to ensure the local copy includes the merged work:
