@@ -43,6 +43,10 @@ STEP_TIMEOUTS=(
   "15-rebase.md=2400"
 )
 
+# Step 6 (run-tests) is now a run-only reporter; a failed attempt means the
+# agent did not produce a parseable test-results.md, not that tests failed.
+# 2 retries is enough because MAX_TEST_FIX_ITERATIONS already re-runs Step 6
+# up to 3 more times via the 06↔07 loop, giving genuine flakes multiple shots.
 STEP_RETRY_COUNTS=(
   "03-tests.md=3"
   "04-implement.md=3"
