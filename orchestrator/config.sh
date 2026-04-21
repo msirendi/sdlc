@@ -28,28 +28,39 @@ SKIP_STEPS=()
 STEP_TIMEOUTS=(
   "01-branch-setup.md=1200"
   "02-technical-spec.md=1800"
-  "03-implement.md=7200"
-  "04-agents-md-check.md=1800"
-  "05-tests.md=3600"
+  "03-tests.md=3600"
+  "04-implement.md=7200"
+  "05-agents-md-check.md=1800"
   "06-run-tests.md=5400"
-  "07-open-pr.md=1800"
-  "08-review-comments.md=3600"
-  "09-semantic-diff-report.md=2400"
-  "10-address-findings.md=3600"
-  "11-ultra-review.md=3600"
-  "12-push-and-hooks.md=1800"
-  "13-fix-ci.md=5400"
-  "14-rebase.md=2400"
+  "07-fix-test-failures.md=5400"
+  "08-open-pr.md=1800"
+  "09-review-comments.md=3600"
+  "10-semantic-diff-report.md=2400"
+  "11-address-findings.md=3600"
+  "12-ultra-review.md=3600"
+  "13-push-and-hooks.md=1800"
+  "14-fix-ci.md=5400"
+  "15-rebase.md=2400"
 )
 
 STEP_RETRY_COUNTS=(
-  "03-implement.md=3"
-  "05-tests.md=3"
-  "06-run-tests.md=3"
-  "10-address-findings.md=3"
-  "11-ultra-review.md=2"
-  "13-fix-ci.md=3"
+  "03-tests.md=3"
+  "04-implement.md=3"
+  "06-run-tests.md=2"
+  "07-fix-test-failures.md=2"
+  "11-address-findings.md=3"
+  "12-ultra-review.md=2"
+  "14-fix-ci.md=3"
 )
+
+# Test-fix loop: after Step 6 (run-tests) writes its report, the orchestrator
+# re-invokes Step 7 (fix) and then Step 6 again until the report's `Result:` line
+# reads PASS or this iteration cap is hit. Decoupling 'run' from 'fix' is the
+# whole point — keep them separate Claude invocations.
+TEST_RUN_STEP="${TEST_RUN_STEP:-06-run-tests.md}"
+TEST_FIX_STEP="${TEST_FIX_STEP:-07-fix-test-failures.md}"
+TEST_RESULTS_REL="${TEST_RESULTS_REL:-.sdlc/artifacts/test-results.md}"
+MAX_TEST_FIX_ITERATIONS="${MAX_TEST_FIX_ITERATIONS:-3}"
 
 # Per-step permission-mode overrides, if needed. Format: "step.md=mode".
 STEP_PERMISSION_MODES=()
@@ -57,10 +68,11 @@ STEP_PERMISSION_MODES=()
 # Canonical durable outputs that make the pipeline stateful across steps.
 STEP_REQUIRED_PATTERNS=(
   "02-technical-spec.md=.sdlc/artifacts/technical-spec.md"
-  "07-open-pr.md=.sdlc/artifacts/pr-body.md"
-  "09-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html"
-  "10-address-findings.md=.sdlc/artifacts/semantic-review-actions.md"
-  "11-ultra-review.md=.sdlc/artifacts/ultra-review.md"
+  "06-run-tests.md=.sdlc/artifacts/test-results.md"
+  "08-open-pr.md=.sdlc/artifacts/pr-body.md"
+  "10-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html"
+  "11-address-findings.md=.sdlc/artifacts/semantic-review-actions.md"
+  "12-ultra-review.md=.sdlc/artifacts/ultra-review.md"
 )
 
 NOTIFICATION_WEBHOOK="${NOTIFICATION_WEBHOOK:-}"

@@ -18,7 +18,7 @@ test_status_command_failed_run_marks_failed_and_skipped_steps() {
   write_manifest "$run_dir" "$repo_dir" \
     "01-branch-setup.md" \
     "02-technical-spec.md" \
-    "03-implement.md"
+    "03-tests.md"
   write_orchestrator_log "$run_dir" "fixture-repo" "287" "02-technical-spec.md" \
     "01-branch-setup.md"
 
@@ -29,7 +29,7 @@ test_status_command_failed_run_marks_failed_and_skipped_steps() {
   assert_contains "$CAPTURED_OUTPUT" "Repository: fixture-repo" "Expected the output to show the logged repository name."
   assert_contains "$CAPTURED_OUTPUT" "  ${CHECK_MARK} completed 01-branch-setup.md" "Expected completed steps to be marked completed."
   assert_contains "$CAPTURED_OUTPUT" "  ${CROSS_MARK} failed 02-technical-spec.md" "Expected the halted step to be marked failed."
-  assert_contains "$CAPTURED_OUTPUT" "  ${SKIP_MARK} skipped 03-implement.md" "Expected later planned steps to be marked skipped."
+  assert_contains "$CAPTURED_OUTPUT" "  ${SKIP_MARK} skipped 03-tests.md" "Expected later planned steps to be marked skipped."
   assert_contains "$CAPTURED_OUTPUT" "Elapsed: 4m 47s" "Expected elapsed seconds to be humanized."
   assert_contains "$CAPTURED_OUTPUT" "Logs: $expected_logs_path" "Expected the output to show the log directory."
 }
@@ -49,10 +49,10 @@ test_status_command_from_nested_directory_uses_repo_root_and_manifest_fallback_n
   expected_logs_path=$(canonicalize_path "$run_dir")
   write_manifest "$run_dir" "$repo_dir" \
     "02-technical-spec.md" \
-    "03-implement.md"
+    "03-tests.md"
   write_orchestrator_log "$run_dir" "" "61" "" \
     "02-technical-spec.md" \
-    "03-implement.md"
+    "03-tests.md"
 
   capture_command "$nested_dir" bash "$STATUS_SCRIPT"
 
@@ -73,7 +73,7 @@ test_status_command_incomplete_run_reports_unavailable_elapsed() {
   run_dir=$(create_run_dir "$repo_dir" "20260413-142531")
   write_manifest "$run_dir" "$repo_dir" \
     "02-technical-spec.md" \
-    "03-implement.md"
+    "03-tests.md"
   write_orchestrator_log "$run_dir" "fixture-repo" "" "" \
     "02-technical-spec.md"
 
@@ -82,7 +82,7 @@ test_status_command_incomplete_run_reports_unavailable_elapsed() {
   assert_exit_code 0 "$CAPTURED_STATUS" "Expected incomplete runs to still report status successfully."
   assert_contains "$CAPTURED_OUTPUT" "Elapsed: unavailable" "Expected incomplete runs to report unavailable elapsed time."
   assert_contains "$CAPTURED_OUTPUT" "Note: the latest run may still be in progress or was interrupted." "Expected incomplete runs to explain why elapsed time is unavailable."
-  assert_contains "$CAPTURED_OUTPUT" "  ${SKIP_MARK} skipped 03-implement.md" "Expected unfinished planned steps to remain skipped."
+  assert_contains "$CAPTURED_OUTPUT" "  ${SKIP_MARK} skipped 03-tests.md" "Expected unfinished planned steps to remain skipped."
 }
 
 test_status_command_missing_manifest_in_latest_run_exits_nonzero() {
@@ -138,10 +138,10 @@ test_status_command_successful_run_prints_summary() {
   expected_logs_path=$(canonicalize_path "$run_dir")
   write_manifest "$run_dir" "$repo_dir" \
     "02-technical-spec.md" \
-    "03-implement.md"
+    "03-tests.md"
   write_orchestrator_log "$run_dir" "fixture-repo" "3661" "" \
     "02-technical-spec.md" \
-    "03-implement.md"
+    "03-tests.md"
 
   capture_command "$repo_dir" bash "$STATUS_SCRIPT"
 
@@ -149,7 +149,7 @@ test_status_command_successful_run_prints_summary() {
   assert_contains "$CAPTURED_OUTPUT" "Run ID: 20260413-142531" "Expected the latest run ID in the summary."
   assert_contains "$CAPTURED_OUTPUT" "Repository: fixture-repo" "Expected the repository name in the summary."
   assert_contains "$CAPTURED_OUTPUT" "  ${CHECK_MARK} completed 02-technical-spec.md" "Expected completed step output for the first planned step."
-  assert_contains "$CAPTURED_OUTPUT" "  ${CHECK_MARK} completed 03-implement.md" "Expected completed step output for the second planned step."
+  assert_contains "$CAPTURED_OUTPUT" "  ${CHECK_MARK} completed 03-tests.md" "Expected completed step output for the second planned step."
   assert_contains "$CAPTURED_OUTPUT" "Elapsed: 1h 1m 1s" "Expected elapsed time to be formatted in hours, minutes, and seconds."
   assert_contains "$CAPTURED_OUTPUT" "Logs: $expected_logs_path" "Expected the summary to show the log directory."
   assert_not_contains "$CAPTURED_OUTPUT" "Note: the latest run may still be in progress or was interrupted." "Did not expect the incomplete-run note for a completed run."

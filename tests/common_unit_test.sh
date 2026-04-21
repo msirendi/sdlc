@@ -18,13 +18,13 @@ test_sdlc_lookup_kv_returns_default_when_array_is_empty() {
   local value=""
   local EMPTY_ARRAY=()
   # shellcheck disable=SC2034
-  value=$(sdlc_lookup_kv EMPTY_ARRAY "03-implement.md" "fallback")
+  value=$(sdlc_lookup_kv EMPTY_ARRAY "04-implement.md" "fallback")
   assert_equals "fallback" "$value" "Expected sdlc_lookup_kv to return the fallback when the array is empty."
 }
 
 test_sdlc_lookup_kv_returns_default_when_key_missing() {
   local value=""
-  local SAMPLE_KV=("02-technical-spec.md=1800" "03-implement.md=7200")
+  local SAMPLE_KV=("02-technical-spec.md=1800" "04-implement.md=7200")
   # shellcheck disable=SC2034
   value=$(sdlc_lookup_kv SAMPLE_KV "99-missing.md" "1200")
   assert_equals "1200" "$value" "Expected sdlc_lookup_kv to return the fallback when the key is missing."
@@ -32,25 +32,25 @@ test_sdlc_lookup_kv_returns_default_when_key_missing() {
 
 test_sdlc_lookup_kv_returns_value_for_present_key() {
   local value=""
-  local SAMPLE_KV=("02-technical-spec.md=1800" "11-ultra-review.md=3600")
+  local SAMPLE_KV=("02-technical-spec.md=1800" "12-ultra-review.md=3600")
   # shellcheck disable=SC2034
-  value=$(sdlc_lookup_kv SAMPLE_KV "11-ultra-review.md" "1200")
+  value=$(sdlc_lookup_kv SAMPLE_KV "12-ultra-review.md" "1200")
   assert_equals "3600" "$value" "Expected sdlc_lookup_kv to return the configured value for the ultra-review step."
 }
 
 test_sdlc_lookup_kv_returns_last_value_when_key_repeats() {
   local value=""
-  local SAMPLE_KV=("11-ultra-review.md=3600" "11-ultra-review.md=7200")
+  local SAMPLE_KV=("12-ultra-review.md=3600" "12-ultra-review.md=7200")
   # shellcheck disable=SC2034
-  value=$(sdlc_lookup_kv SAMPLE_KV "11-ultra-review.md" "0")
+  value=$(sdlc_lookup_kv SAMPLE_KV "12-ultra-review.md" "0")
   assert_equals "7200" "$value" "Expected sdlc_lookup_kv to prefer the last assignment so overrides win."
 }
 
 test_sdlc_lookup_kv_preserves_values_containing_equals_sign() {
   local value=""
-  local SAMPLE_KV=("09-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html=glob")
+  local SAMPLE_KV=("10-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html=glob")
   # shellcheck disable=SC2034
-  value=$(sdlc_lookup_kv SAMPLE_KV "09-semantic-diff-report.md" "")
+  value=$(sdlc_lookup_kv SAMPLE_KV "10-semantic-diff-report.md" "")
   assert_equals ".sdlc/reports/semantic_diff_report_*.html=glob" "$value" \
     "Expected sdlc_lookup_kv to preserve '=' characters inside the value portion."
 }
@@ -58,21 +58,21 @@ test_sdlc_lookup_kv_preserves_values_containing_equals_sign() {
 test_sdlc_step_mode_detects_automated_mode() {
   local step_file=""
   use_temp_dir
-  step_file="$TEST_TEMP_DIR/05-tests.md"
+  step_file="$TEST_TEMP_DIR/03-tests.md"
   cat <<'EOF' > "$step_file"
-# Step 5 — Implement Thorough Unit and Integration Tests
+# Step 3 — Author Tests From the Technical Spec (Before Implementation)
 
 **Mode:** Automated
 EOF
-  assert_equals "automated" "$(sdlc_step_mode "$step_file")" "Expected automated mode for Step 5."
+  assert_equals "automated" "$(sdlc_step_mode "$step_file")" "Expected automated mode for Step 3."
 }
 
 test_sdlc_step_mode_detects_manual_mode_case_insensitive() {
   local step_file=""
   use_temp_dir
-  step_file="$TEST_TEMP_DIR/15-merge.md"
+  step_file="$TEST_TEMP_DIR/16-merge.md"
   cat <<'EOF' > "$step_file"
-# Step 15 — Merge
+# Step 16 — Merge
 
 **Mode:** MANUAL
 EOF

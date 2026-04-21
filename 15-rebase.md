@@ -1,4 +1,4 @@
-# Step 14 — Rebase if Needed
+# Step 15 — Rebase if Needed
 
 **Mode:** Automated
 **Objective:** Keep the feature branch current with the target base branch and resolve integration conflicts before final merge.
@@ -45,7 +45,7 @@
    - If a conflict is complex (both sides modified the same logic for different reasons), resolve it carefully and add a brief comment in the code explaining the merge decision if the result is non-obvious.
 
 5. **After rebase completes:**
-   - **Run the full test suite** (Step 6) again. Rebase can introduce subtle breakage even without conflicts (e.g., a removed import that your code depends on, a renamed function, a changed config key).
+   - **Re-run the test suite** by re-running Step 6 (and Step 7 if failures appear). Rebase can introduce subtle breakage even without conflicts (e.g., a removed import that your code depends on, a renamed function, a changed config key).
    - Fix any failures before proceeding.
 
 6. **Force-push the rebased branch:**
@@ -57,7 +57,7 @@
 7. **Verify on GitHub:**
    - The PR diff is clean and conflict-free.
    - CI has been re-triggered on the rebased branch.
-   - Wait for CI to pass (Step 13).
+   - Wait for CI to pass (Step 14).
 
 ## Outputs
 

@@ -1,4 +1,4 @@
-# Step 4 — Check Against AGENTS.md and Resolve Discrepancies
+# Step 5 — Check Against AGENTS.md and Resolve Discrepancies
 
 **Mode:** Automated
 **Objective:** Ensure the implementation and working practices comply with repository-specific agent instructions and documented engineering constraints.
@@ -10,7 +10,7 @@
 
 ## Prerequisites
 
-- Code changes from the technical spec have been implemented (Step 3).
+- Code changes from the technical spec have been implemented (Step 4).
 - If `AGENTS.md` exists, it is readable.
 
 ## Procedure

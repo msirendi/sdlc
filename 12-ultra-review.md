@@ -1,4 +1,4 @@
-# Step 11 — Ultra Review
+# Step 12 — Ultra Review
 
 **Mode:** Automated
 **Objective:** Run a dedicated review session that reads through the branch changes and flags bugs and design issues a careful reviewer would catch.
@@ -6,14 +6,14 @@
 ## Inputs
 
 - Current feature branch diff against `main`
-- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` from Step 9
-- `.sdlc/artifacts/semantic-review-actions.md` from Step 10
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` from Step 10
+- `.sdlc/artifacts/semantic-review-actions.md` from Step 11
 - Canonical output file: `.sdlc/artifacts/ultra-review.md`
 
 ## Prerequisites
 
-- Step 10 completed and its remediation commits are on the branch.
-- The test suite is passing after Step 10.
+- Step 11 completed and its remediation commits are on the branch.
+- The test suite is passing after Step 11.
 
 ## Procedure
 
@@ -21,7 +21,7 @@
    ```
    claude -p "/ultrareview" --permission-mode acceptEdits
    ```
-   The command produces a review session that reads through the changes and surfaces bugs and design issues a careful reviewer would catch. Use it as a second independent pass on top of Step 9's semantic diff.
+   The command produces a review session that reads through the changes and surfaces bugs and design issues a careful reviewer would catch. Use it as a second independent pass on top of Step 10's semantic diff.
 
 2. **Capture the review output** verbatim at `.sdlc/artifacts/ultra-review.md`. Preserve the finding structure (severity, file, location, explanation) so later steps can act on it.
 
@@ -42,7 +42,7 @@
    ```
    Split into multiple commits only if findings touch unrelated concerns.
 
-6. **Re-run the test suite** (Step 6) to confirm no regressions from the applied fixes.
+6. **Re-run the test suite** by re-running Step 6 (and, if it surfaces failures, Step 7) to confirm no regressions from the applied fixes.
 
 ## Outputs
 

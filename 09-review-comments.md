@@ -1,4 +1,4 @@
-# Step 8 — Address PR Review Comments
+# Step 9 — Address PR Review Comments
 
 **Mode:** Automated
 **Objective:** Incorporate reviewer feedback with thoughtful code changes and concise comment responses that close the loop on each addressed point.

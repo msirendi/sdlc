@@ -1,18 +1,18 @@
-# Step 10 — Address Unclear and Weakly Justified Changes
+# Step 11 — Address Unclear and Weakly Justified Changes
 
 **Mode:** Automated
 **Objective:** Tighten the branch by either removing, rewriting, or explicitly justifying edits that the semantic diff analysis flagged as weak or unclear.
 
 ## Inputs
 
-- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` from Step 9
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html` from Step 10
 - Diff regions labeled `Unclear / possibly superfluous`
 - Diff regions labeled `Weakly justified`
 - Canonical action log: `.sdlc/artifacts/semantic-review-actions.md`
 
 ## Prerequisites
 
-- Step 9 has been completed.
+- Step 10 has been completed.
 - The flagged changes can be traced back to specific files or hunks.
 
 ## Procedure

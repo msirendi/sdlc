@@ -1,4 +1,4 @@
-# Step 9 — Semantic Diff Report
+# Step 10 — Semantic Diff Report
 
 **Mode:** Automated
 **Objective:** Create a reviewer-facing semantic diff report for the branch against `main` that explains the purpose and justification of changes in coherent engineering terms.
