@@ -70,6 +70,7 @@
    - The first non-blank `Result:` line MUST read either `Result: PASS` or `Result: FAIL`.
    - `Result: PASS` if and only if every failing test was confirmed `pre-existing` (or there were no failures at all). Any `branch` or unconfirmed failure means `Result: FAIL`.
    - Do not write `Result: PASS` to make the pipeline proceed. The orchestrator's loop reads this line to decide whether to invoke Step 7.
+   - Any first `Result:` value that is neither `PASS` nor `FAIL` (or a missing `Result:` line entirely) is treated as UNKNOWN by the loop driver and handled as non-pass — i.e. Step 7 runs. Do not exploit this by omitting the marker; malformed reports indicate a Step 6 bug.
 
 5. **Commit the report** so it is durable across pipeline iterations:
    ```

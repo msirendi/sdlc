@@ -12,6 +12,11 @@
 # UNKNOWN — lets a silently-broken Step 6 sail a red branch through to
 # open-PR. UNKNOWN is rare enough in practice that surfacing the Step 6 bug
 # via the fix step's own logs is the smaller hazard.
+#
+# awk reads until the first match and exits, which avoids the sed|head SIGPIPE
+# race that would otherwise exit 141 under the orchestrator's `set -o pipefail`
+# when test-results.md is large enough for head to close the pipe before sed
+# finishes.
 sdlc_test_results_status() {
   local results_file="$1"
   if [[ -z "$results_file" || ! -f "$results_file" ]]; then
@@ -19,7 +24,13 @@ sdlc_test_results_status() {
     return
   fi
   local marker
-  marker=$(sed -n 's/^[[:space:]]*Result:[[:space:]]*//Ip' "$results_file" | head -n 1)
+  marker=$(awk '
+    /^[[:space:]]*[Rr][Ee][Ss][Uu][Ll][Tt]:/ {
+      sub(/^[[:space:]]*[Rr][Ee][Ss][Uu][Ll][Tt]:[[:space:]]*/, "")
+      print
+      exit
+    }
+  ' "$results_file")
   marker=$(printf '%s' "$marker" | tr '[:lower:]' '[:upper:]')
   case "$marker" in
     PASS*) printf 'PASS\n' ;;

@@ -39,8 +39,9 @@ test_sdlc_is_discoverable_on_path() {
   local resolved
   local name
   for name in sdlc sdlc-init sdlc-dry sdlc-status; do
-    resolved=$(PATH="$BIN_DIR:/usr/bin:/bin" HOME="$fake_home" \
-      env -i PATH="$BIN_DIR:/usr/bin:/bin" HOME="$fake_home" \
+    # env -i wipes the environment before running the inner command, so the
+    # PATH/HOME assignments are only set on the inner invocation.
+    resolved=$(env -i PATH="$BIN_DIR:/usr/bin:/bin" HOME="$fake_home" \
       command -v "$name" || true)
     if [[ -z "$resolved" ]]; then
       fail "$name is not discoverable on PATH when $BIN_DIR is prepended."

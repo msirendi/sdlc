@@ -15,10 +15,11 @@ The orchestrator drives a loop between Step 6 (run) and Step 7 (fix) until the s
 
 - Step 6 has completed and written `.sdlc/artifacts/test-results.md`.
 - The report's first `Result:` line is `FAIL` (if it is `PASS`, this step has nothing to do — exit READY immediately with a one-line summary).
+- If `.sdlc/artifacts/test-results.md` is absent entirely (which only happens when an operator targeted Step 7 directly via `--only 07-fix-test-failures.md` on a branch where Step 6 has never run), return BLOCKED and ask the operator to run Step 6 first. Do not invent a report and do not attempt fixes without one.
 
 ## Procedure
 
-1. **Read `.sdlc/artifacts/test-results.md`.** If the first `Result:` line is `PASS`, finish immediately with status READY and a summary noting "no failures to fix." Do not modify anything.
+1. **Read `.sdlc/artifacts/test-results.md`.** If the file is missing, return BLOCKED with a one-line message: "Step 6 must run before Step 7 can fix failures." If the first `Result:` line is `PASS`, finish immediately with status READY and a summary noting "no failures to fix." Do not modify anything in either case.
 
 2. **For each failure listed under `## Failures`:**
    - Read the file and stack trace pinpointed in the report.
