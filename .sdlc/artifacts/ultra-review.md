@@ -88,21 +88,21 @@ Rather than capture the sentinel as the "review," I performed the equivalent car
 - **Severity:** Medium
 - **Action:** fix
 - **Rationale:** Newly-introduced code in this PR, latent correctness bug that triggers on large reports, easy single-file fix that the existing unit tests in `test_fix_loop_unit_test.sh` pin.
-- **Commit SHA:** (see commit below)
+- **Commit SHA:** `e9a4eda`
 
 ### Finding 3 — Spec/parser drift over `Result:` state model
 - **File:** `06-run-tests.md:70-72`
 - **Severity:** Low
 - **Action:** fix
 - **Rationale:** Newly-introduced step file; one-line doc addition that makes the parser's UNKNOWN bucket explicit so future readers and agents understand loop behavior.
-- **Commit SHA:** (see commit below)
+- **Commit SHA:** `e9a4eda`
 
 ### Finding 4 — Step 7 missing "no results file" guidance
 - **File:** `07-fix-test-failures.md:9-21`
 - **Severity:** Low
 - **Action:** fix
 - **Rationale:** Newly-introduced step; the `--only 07-…` escape hatch is tested and documented, so the missing-file case is a real operator-visible gap. Small addition to the Prerequisites and Procedure sections.
-- **Commit SHA:** (see commit below)
+- **Commit SHA:** `e9a4eda`
 
 ### Finding 5 — `DEFAULT_RETRIES` naming
 - **File:** `orchestrator/config.sh:23,50-58`
@@ -123,7 +123,7 @@ Rather than capture the sentinel as the "review," I performed the equivalent car
 - **Severity:** Low
 - **Action:** fix
 - **Rationale:** Newly-introduced test code; the leading `PATH=… HOME=…` are misleading dead code that a future reader would spend time decoding. Three-line cleanup with no behavior change.
-- **Commit SHA:** (see commit below)
+- **Commit SHA:** `e9a4eda`
 
 ## Summary
 
