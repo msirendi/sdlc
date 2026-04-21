@@ -8,6 +8,7 @@ source "$SDLC_HOME/orchestrator/lib/context.sh"
 source "$SDLC_HOME/orchestrator/lib/notify.sh"
 source "$SDLC_HOME/orchestrator/lib/execute.sh"
 source "$SDLC_HOME/orchestrator/lib/validate.sh"
+source "$SDLC_HOME/orchestrator/lib/test_fix_loop.sh"
 
 START_FROM=""
 ONLY_STEP=""
@@ -149,6 +150,29 @@ if [[ ${#FILTERED_STEPS[@]} -eq 0 ]]; then
   exit 1
 fi
 
+# When the run-tests step (06) is planned, the fix-test-failures step (07) is
+# driven internally by the test-fix loop and must not also appear as a separate
+# top-level step — so drop it from the manifest. If the operator targeted 07
+# directly (without 06), keep it; the for-loop will run it standalone.
+test_run_step_planned=false
+for step_file in "${FILTERED_STEPS[@]}"; do
+  if [[ "$(basename "$step_file")" == "$TEST_RUN_STEP" ]]; then
+    test_run_step_planned=true
+    break
+  fi
+done
+
+if [[ "$test_run_step_planned" == "true" ]]; then
+  REMAINING_STEPS=()
+  for step_file in "${FILTERED_STEPS[@]}"; do
+    if [[ "$(basename "$step_file")" == "$TEST_FIX_STEP" ]]; then
+      continue
+    fi
+    REMAINING_STEPS+=("$step_file")
+  done
+  FILTERED_STEPS=("${REMAINING_STEPS[@]}")
+fi
+
 {
   printf '# Pipeline Run Manifest\n\n'
   printf -- '- Repository: `%s`\n' "$REPO_ROOT"
@@ -201,21 +225,38 @@ completed=0
 failed=0
 start_seconds=$SECONDS
 
-for step_file in "${FILTERED_STEPS[@]}"; do
+# Run a single step with its configured retry budget and validation gate.
+# When $2 is non-empty, log/summary filenames are suffixed with `_iter<N>` so
+# repeated invocations of the same step (the 06↔07 test-fix loop) do not
+# overwrite each other's artifacts.
+execute_step_with_retries() {
+  local step_file="$1"
+  local iter_suffix="${2:-}"
+  local step_name
   step_name=$(basename "$step_file")
+  local timeout_value
   timeout_value=$(sdlc_lookup_kv STEP_TIMEOUTS "$step_name" "$DEFAULT_TIMEOUT")
+  local max_retries
   max_retries=$(sdlc_lookup_kv STEP_RETRY_COUNTS "$step_name" "$DEFAULT_RETRIES")
 
+  local label="$step_name"
+  if [[ -n "$iter_suffix" ]]; then
+    label="$step_name (iter $iter_suffix)"
+  fi
+
   sdlc_log "INFO" "======================================================"
-  sdlc_log "INFO" "Starting $step_name"
+  sdlc_log "INFO" "Starting $label"
   sdlc_log "INFO" "======================================================"
 
-  attempt=1
-  success=false
+  local base_name="${step_name%.md}"
+  if [[ -n "$iter_suffix" ]]; then
+    base_name="${base_name}_iter${iter_suffix}"
+  fi
 
+  local attempt=1
   while [[ "$attempt" -le "$max_retries" ]]; do
-    attempt_log="$LOG_DIR/${step_name%.md}_attempt${attempt}.log"
-    attempt_summary="$LOG_DIR/${step_name%.md}_attempt${attempt}_summary.md"
+    local attempt_log="$LOG_DIR/${base_name}_attempt${attempt}.log"
+    local attempt_summary="$LOG_DIR/${base_name}_attempt${attempt}_summary.md"
 
     sdlc_log "INFO" "Attempt $attempt/$max_retries"
     set +e
@@ -227,26 +268,97 @@ for step_file in "${FILTERED_STEPS[@]}"; do
       "$attempt_log" \
       "$attempt_summary" \
       "$timeout_value"
-    exit_code=$?
+    local exit_code=$?
     set -e
 
     if [[ "$exit_code" -eq 124 ]]; then
-      sdlc_log "WARN" "Step $step_name timed out after ${timeout_value}s."
-      notify "SDLC $REPO_NAME: $step_name timed out"
+      sdlc_log "WARN" "Step $label timed out after ${timeout_value}s."
+      notify "SDLC $REPO_NAME: $label timed out"
     elif [[ "$exit_code" -ne 0 ]]; then
-      sdlc_log "WARN" "Step $step_name exited with code $exit_code."
+      sdlc_log "WARN" "Step $label exited with code $exit_code."
     elif validate_step "$step_name" "$REPO_ROOT" "$attempt_log" "$attempt_summary"; then
-      cp "$attempt_log" "$LOG_DIR/${step_name%.md}.log"
-      cp "$attempt_summary" "$LOG_DIR/${step_name%.md}_summary.md"
-      update_context "$step_name" "$LOG_DIR/${step_name%.md}_summary.md" "$CONTEXT_FILE"
-      success=true
-      break
+      cp "$attempt_log" "$LOG_DIR/${base_name}.log"
+      cp "$attempt_summary" "$LOG_DIR/${base_name}_summary.md"
+      update_context "$label" "$LOG_DIR/${base_name}_summary.md" "$CONTEXT_FILE"
+      return 0
     else
-      sdlc_log "WARN" "Validation failed for $step_name."
+      sdlc_log "WARN" "Validation failed for $label."
     fi
 
     attempt=$((attempt + 1))
   done
+
+  return 1
+}
+
+# Drive the run-tests / fix-test-failures loop. Step 6 always runs first so the
+# report exists. After each Step 6 result, if it is FAIL/UNKNOWN we run Step 7
+# and re-run Step 6, up to MAX_TEST_FIX_ITERATIONS additional fix passes. The
+# decoupling here is the whole point: Step 6 only runs tests, Step 7 only fixes
+# code, and the orchestrator (not the agent) decides when to iterate.
+execute_test_loop() {
+  local run_step_file="$1"
+  local fix_step_file="$STEPS_DIR/$TEST_FIX_STEP"
+  local results_file="$REPO_ROOT/$TEST_RESULTS_REL"
+  local results_status
+
+  if [[ ! -f "$fix_step_file" ]]; then
+    sdlc_log "ERROR" "Fix step file is missing: $fix_step_file"
+    return 1
+  fi
+
+  if ! execute_step_with_retries "$run_step_file"; then
+    return 1
+  fi
+
+  results_status=$(sdlc_test_results_status "$results_file")
+  if [[ "$results_status" == "PASS" ]]; then
+    sdlc_log "INFO" "Test suite is green after the initial run; skipping $TEST_FIX_STEP."
+    return 0
+  fi
+
+  local iter=1
+  while [[ "$iter" -le "$MAX_TEST_FIX_ITERATIONS" ]]; do
+    sdlc_log "INFO" "Test results: $results_status. Running fix iteration $iter/$MAX_TEST_FIX_ITERATIONS."
+    if ! execute_step_with_retries "$fix_step_file" "$iter"; then
+      sdlc_log "ERROR" "Fix step $TEST_FIX_STEP failed on iteration $iter."
+      return 1
+    fi
+
+    if ! execute_step_with_retries "$run_step_file" "$iter"; then
+      sdlc_log "ERROR" "Re-run of $TEST_RUN_STEP failed on iteration $iter."
+      return 1
+    fi
+
+    results_status=$(sdlc_test_results_status "$results_file")
+    if [[ "$results_status" == "PASS" ]]; then
+      sdlc_log "INFO" "Test suite passed after fix iteration $iter."
+      return 0
+    fi
+
+    iter=$((iter + 1))
+  done
+
+  sdlc_log "ERROR" \
+    "Test suite still $results_status after $MAX_TEST_FIX_ITERATIONS fix iterations; halting."
+  return 1
+}
+
+# Step 7 was already filtered out above when Step 6 is planned, so the for-loop
+# only encounters it when the operator targeted it directly via --only/--start-from.
+for step_file in "${FILTERED_STEPS[@]}"; do
+  step_name=$(basename "$step_file")
+
+  success=false
+  if [[ "$step_name" == "$TEST_RUN_STEP" ]]; then
+    if execute_test_loop "$step_file"; then
+      success=true
+    fi
+  else
+    if execute_step_with_retries "$step_file"; then
+      success=true
+    fi
+  fi
 
   if [[ "$success" == "true" ]]; then
     completed=$((completed + 1))

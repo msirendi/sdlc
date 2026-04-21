@@ -1,4 +1,4 @@
-# Step 15 — Merge Feature Branch to Main (Manual)
+# Step 16 — Merge Feature Branch to Main (Manual)
 
 **Mode:** Manual
 **Objective:** Finalize the change by merging the reviewed and validated remote feature branch into `main` through GitHub.

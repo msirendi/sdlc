@@ -25,7 +25,7 @@ setup_execute_fixture() {
 
   FAKE_REPO="$TEST_TEMP_DIR/target-repo"
   FAKE_BIN="$TEST_TEMP_DIR/bin"
-  STEP_FILE="$TEST_TEMP_DIR/05-tests.md"
+  STEP_FILE="$TEST_TEMP_DIR/03-tests.md"
   TASK_FILE="$TEST_TEMP_DIR/task.md"
   CONTEXT_FILE="$TEST_TEMP_DIR/pipeline-context.md"
   STEP_LOG_FILE="$TEST_TEMP_DIR/step.log"
@@ -40,10 +40,10 @@ setup_execute_fixture() {
   mkdir -p "$FAKE_BIN"
 
   cat <<'EOF' > "$STEP_FILE"
-# Step 5 — Implement Thorough Unit and Integration Tests
+# Step 3 — Author Tests From the Technical Spec (Before Implementation)
 
 **Mode:** Automated
-Execute unit and integration tests.
+Author unit and integration tests against the spec.
 EOF
 
   cat <<'EOF' > "$TASK_FILE"
@@ -125,7 +125,7 @@ test_run_claude_step_invokes_claude_with_configured_flags() {
 test_run_claude_step_applies_per_step_permission_mode_override() {
   load_execute_environment
   setup_execute_fixture
-  STEP_PERMISSION_MODES=("05-tests.md=plan")
+  STEP_PERMISSION_MODES=("03-tests.md=plan")
 
   invoke_run_claude_step
   assert_exit_code 0 "$RUN_CLAUDE_STATUS" "Expected override invocation to succeed."
@@ -167,7 +167,7 @@ test_run_claude_step_passes_full_prompt_on_stdin() {
     "Expected the prompt to identify the repository root."
   assert_contains "$stdin_contents" "Build high-value tests that exercise the Claude CLI runner path." \
     "Expected the task description to be injected into the prompt."
-  assert_contains "$stdin_contents" "Execute unit and integration tests." \
+  assert_contains "$stdin_contents" "Author unit and integration tests against the spec." \
     "Expected the step instructions to be injected into the prompt."
   assert_contains "$stdin_contents" "## Final Response Format" \
     "Expected the canonical final response format to be included in the prompt."

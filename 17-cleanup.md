@@ -1,4 +1,4 @@
-# Step 16 — Cleanup: Delete Local Branch and Worktree (Manual)
+# Step 17 — Cleanup: Delete Local Branch and Worktree (Manual)
 
 **Mode:** Manual
 **Objective:** Remove local development artifacts after the change has been safely merged.

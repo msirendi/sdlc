@@ -1,82 +1,135 @@
-# Ultra Review — SDLC-TEST
+# Ultra Review — SDLC-2
 
-- **Branch:** `codex/test-claude-ultra-review-20260419-114154`
+- **Branch:** `marek/sdlc-2-decouple-tests`
 - **Base:** `main`
-- **Tip at review time:** `1344b2d` (post Step 10 remediation)
-- **Reviewer session:** Claude Opus 4.7 acting as Step 11 executor
+- **Tip at review time:** `b4906da` (post Step 11 remediation)
+- **Reviewer session:** Claude Opus 4.7 acting as Step 12 executor
 
 ## Tool note
 
-Step 11's procedure asks for the output of the `claude -p "/ultrareview" --permission-mode acceptEdits` slash command. In this environment `/ultrareview` is not installed: `claude -p "/ultrareview"` returns verbatim `/ultrareview isn't available in this environment.` (exit code 0). Rather than capture that sentinel as the "review," I performed the equivalent careful-reviewer pass from this orchestrator session over the full `git diff main..HEAD` and recorded the findings below in the same structure `/ultrareview` would produce. The missing skill itself is Finding 3 below and is triaged as a deferred follow-up.
+Step 12's procedure prescribes `claude -p "/ultrareview" --permission-mode acceptEdits`. In this environment `/ultrareview` is not installed — the slash command responds with the verbatim sentinel `/ultrareview isn't available in this environment.` (exit 0). This is the same gap the SDLC-TEST ultra-review recorded under its Finding 3, and it was not remediated on `main` before this branch was cut.
+
+Rather than capture the sentinel as the "review," I performed the equivalent careful-reviewer pass from this orchestrator session over the full `git diff origin/main..HEAD` (42 files, +1,221 / −400) and recorded the findings below in the structure `/ultrareview` would produce. The skill's continued absence is Finding 1 and is triaged as `defer` with the existing follow-up context.
 
 ## Findings
 
-### Finding 1 — Summary file contains stderr noise, breaking the clean-summary contract
+### Finding 1 — `/ultrareview` skill is still missing; Step 12 hardcodes it as the sole review mechanism
 
-- **Severity:** Medium (correctness / downstream-contract regression)
-- **File:** `orchestrator/lib/execute.sh:87-114`
-- **Location:** The `run_claude_step` pipeline
+- **Severity:** Medium (design / operability — pre-existing, not introduced by SDLC-2)
+- **File:** `12-ultra-review.md:20-24`
+- **Location:** Procedure step 1
   ```
-  printf … | sdlc_run_with_timeout … claude … 2>&1 | tee "$log_file"
-  …
-  cp "$log_file" "$summary_file"
+  claude -p "/ultrareview" --permission-mode acceptEdits
   ```
-- **Explanation:** Claude's stdout (the final assistant message) and stderr (framework status, warnings, progress chatter from `--print`) are merged via `2>&1` and teed into `$log_file`. `$summary_file` is then produced by `cp "$log_file" "$summary_file"`, so any stderr line claude emits — for example transport warnings, deprecation notices, or rate-limit info — lands in the summary that downstream Steps 9 and 10 read back as "the final assistant response." On the `main` branch this did not happen because `codex exec --output-last-message "$summary_file"` wrote the clean final message directly; switching to Claude dropped that path and did not replace it. The explanatory comment on line 90 claims the log "contains the final assistant message as prose," but that is only true when claude happens to emit nothing on stderr. The resulting summary can cause the validator's `Status: READY` regex to match a stderr line by accident, or cause Step 09 to include framework noise in the context it seeds to later steps.
+- **Explanation:** This SDLC-2 PR renumbered `11-ultra-review.md` → `12-ultra-review.md` but carried forward the prior issue: on Claude Code installs that ship without `/ultrareview`, the command responds with `/ultrareview isn't available in this environment.` and exits 0. The orchestrator's validator would treat that as a successful step with an empty review, skipping every subsequent finding-triage check. The step documents neither the skill as a prerequisite nor an inline-prompt fallback. This is the direct continuation of the prior ultra-review's Finding 3 and was also noted as an open concern in the SDLC-1 merge.
 
-### Finding 2 — `CLAUDE_EXTRA_ARGS` example references a nonexistent `--max-turns` flag
+### Finding 2 — `sdlc_test_results_status` can exit 141 (SIGPIPE) under `set -o pipefail` on large results reports
 
-- **Severity:** Medium (documentation correctness / copy-paste bomb)
-- **Files:**
-  - `templates/overrides-template.sh:20` — `CLAUDE_EXTRA_ARGS="--max-turns 40 --max-budget-usd 10.00"`
-  - `tests/execute_integration_test.sh:144` — same string used as test fixture
-  - `tests/execute_integration_test.sh:151-152` — assertion that `--max-turns 40` is forwarded
-- **Explanation:** `claude --help` does not list a `--max-turns` flag (confirmed by `claude --help 2>&1 | grep max-turns` returning empty). `--max-budget-usd` is real, but a user who copies the template example into `.sdlc/overrides.sh` will cause every automated step to exit nonzero with `error: unknown option '--max-turns'` before the claude session even begins. The integration test happens to pass only because the `claude` stub does not validate its argv. This is a real, silent bug — the test matrix thinks it is asserting a valid user-facing capability.
+- **Severity:** Medium (correctness footgun in the newly-introduced loop driver)
+- **File:** `orchestrator/lib/test_fix_loop.sh:15-29`
+- **Location:** The sed|head pipeline
+  ```
+  marker=$(sed -n 's/^[[:space:]]*Result:[[:space:]]*//Ip' "$results_file" | head -n 1)
+  ```
+- **Explanation:** `run-pipeline.sh:2` enables `set -euo pipefail`, and `execute_test_loop` calls `results_status=$(sdlc_test_results_status "$results_file")` inside that shell context. `sed … | head -n 1` causes `sed` to receive SIGPIPE once `head` closes its input. Under `pipefail`, the pipeline exit code is then 141, and `set -e` aborts the orchestrator even though the parse succeeded. I reproduced this locally — with a 500K-line file containing `Result: PASS` on every line, the same pipeline returns exit 141 while correctly setting `marker=PASS`. For the typical small `.sdlc/artifacts/test-results.md` (currently ~1.2 KB), sed finishes before `head` closes, and the bug does not trigger. But on repos whose report includes verbose traces (hundreds of failures, full stacks), the orchestrator would spuriously halt with `set -e`. The fix is to read until the first match without pipes — e.g. `awk '/^[[:space:]]*[Rr]esult:/ { sub(…); print; exit }'`.
 
-### Finding 3 — Step 11 hard-depends on an `/ultrareview` skill that ships separately from Claude Code
+### Finding 3 — `06-run-tests.md` documents a two-state `Result:` contract but the parser has three states
 
-- **Severity:** High (design / operability — pipeline halts on installs without the skill)
-- **File:** `11-ultra-review.md:20-24`
-- **Explanation:** The procedure's step 1 prescribes `claude -p "/ultrareview" --permission-mode acceptEdits` and treats that as the sole way to generate findings. `/ultrareview` is not a stock slash command: on this environment `claude -p "/ultrareview"` responds with `/ultrareview isn't available in this environment.` and exits 0 — which would bypass the retry loop entirely and hand the orchestrator an empty-review sentinel, not findings. Any operator whose Claude Code install lacks the skill will either get a sentinel review (bad) or will have to manually edit the step (worse). The step does not document the skill as a prerequisite, does not ship the skill alongside the package, and has no inline-prompt fallback.
+- **Severity:** Low (spec/parser drift in the newly-introduced step)
+- **File:** `06-run-tests.md:70-72`
+- **Location:** The "do not deviate" paragraph under the structured-report format
+  ```
+  - The first non-blank `Result:` line MUST read either `Result: PASS` or `Result: FAIL`.
+  ```
+- **Explanation:** `sdlc_test_results_status` returns PASS, FAIL, or UNKNOWN, and the orchestrator treats UNKNOWN as non-pass (loop continues). The step file never mentions UNKNOWN, so an agent reading only the step file cannot predict the orchestrator's behavior on malformed output, and a reader auditing the contract cannot tell whether UNKNOWN is dead code or load-bearing. Add a one-line note: anything that doesn't begin with `PASS` or `FAIL` is treated as UNKNOWN (non-pass) by the test-fix loop.
 
-### Finding 4 — Step 11 required-pattern check is existence-only; does not enforce `## Actions` section
+### Finding 4 — `07-fix-test-failures.md` has no guidance when `test-results.md` is absent, even though `--only 07-…` is the documented escape hatch
 
-- **Severity:** Low (validation completeness)
-- **File:** `orchestrator/config.sh:63`
-- **Location:** `"11-ultra-review.md=.sdlc/artifacts/ultra-review.md"` in `STEP_REQUIRED_PATTERNS`
-- **Explanation:** The step's Completion criteria state the artifact "must contain the `/ultrareview` findings plus an `## Actions` section," but the validator only checks that the file exists and is nonempty. A step that writes findings without the `## Actions` header would pass validation silently, defeating the triage-decision guarantee.
+- **Severity:** Low (operational gap in the newly-introduced step)
+- **File:** `07-fix-test-failures.md:9-21`
+- **Location:** Inputs / Prerequisites / Procedure step 1
+- **Explanation:** The step assumes `.sdlc/artifacts/test-results.md` exists (it is listed as an input and a prerequisite). But the pipeline integration test `test_pipeline_manifest_includes_fix_step_when_targeted_directly` and the README both advertise `sdlc --only 07-fix-test-failures.md` as the standalone-fix escape hatch. If an operator targets Step 7 on a fresh branch where Step 6 has not yet run, the file does not exist, and the step's procedure gives the agent no instruction for that state. Add a sentence: if the file is missing, return BLOCKED and ask the operator to run Step 6 first.
 
-### Finding 5 — `CLAUDE_EXTRA_ARGS` can silently override orchestrator-pinned flags
+### Finding 5 — `DEFAULT_RETRIES`/`STEP_RETRY_COUNTS` are named "retries" but function as "max attempts"
 
-- **Severity:** Low (configuration safety)
-- **File:** `orchestrator/lib/execute.sh:100` — `${claude_args[@]+"${claude_args[@]}"}` appended after the pinned flags
-- **Explanation:** The extra-args array is appended after `--output-format text` and `--permission-mode "$permission_mode"`. If a user sets `CLAUDE_EXTRA_ARGS="--output-format json"` they will get two `--output-format` flags; most CLI parsers take last-wins, which silently breaks the downstream contract the inline comment explicitly warns about (Finding 1 is the consumer of this contract). There is no guard and no documentation of which flags are reserved by the orchestrator.
+- **Severity:** Low (pre-existing naming, not introduced by SDLC-2)
+- **File:** `orchestrator/config.sh:23,50-58`, `orchestrator/run-pipeline.sh:256-257`
+- **Explanation:** `while [[ "$attempt" -le "$max_retries" ]]; do` with `max_retries=2` gives 2 attempts total, not 1 attempt + 2 retries. The SDLC-2 change touched `STEP_RETRY_COUNTS` (dropped Step 6 from 3→2 and added Step 7=2), which amplifies the confusion because the comment above the array now says "retries" while the loop consumes it as "attempts." This is a pre-existing misnomer. Rename both to `MAX_ATTEMPTS` and `STEP_MAX_ATTEMPTS` for clarity, or adjust the loop bound to `attempt <= max_retries + 1` to match the name. Not an SDLC-2 regression.
+
+### Finding 6 — `STEP_REQUIRED_PATTERNS` validates existence but not freshness, so a stale `test-results.md` silently satisfies Step 6
+
+- **Severity:** Low (systemic design trade-off, not introduced by SDLC-2)
+- **File:** `orchestrator/lib/validate.sh:33-48`, `orchestrator/config.sh:76`
+- **Explanation:** `validate_step` uses `compgen -G` to check that the required path matches. If Step 6 runs but the agent fails to rewrite `.sdlc/artifacts/test-results.md` (for whatever reason), validation still passes because the file exists from a prior commit, and `execute_test_loop` reads a stale `Result:`. If the stale report says PASS, Step 7 is skipped and the pipeline proceeds on an unverified branch. The SDLC-2 change introduces the first load-bearing file in this class (the 06↔07 loop actively depends on the file's content), so the trade-off is newly observable even though the validator behavior is old. A cheap mitigation would be to require the results file's mtime to be newer than the step's invocation timestamp.
+
+### Finding 7 — `test_sdlc_is_discoverable_on_path` sets environment variables that `env -i` immediately wipes
+
+- **Severity:** Low (test-code cleanliness in the newly-added `bin_wrappers_unit_test.sh`)
+- **File:** `tests/bin_wrappers_unit_test.sh:42-44`
+- **Location:**
+  ```
+  resolved=$(PATH="$BIN_DIR:/usr/bin:/bin" HOME="$fake_home" \
+    env -i PATH="$BIN_DIR:/usr/bin:/bin" HOME="$fake_home" \
+    command -v "$name" || true)
+  ```
+- **Explanation:** The leading `PATH=… HOME=…` assignments apply only to the `env` process itself, and `env -i` wipes the environment before exec'ing `command`. The outer assignments are dead code. They do not affect correctness but they are misleading — a future reader will read them as load-bearing. Drop them.
 
 ## Actions
 
-### Finding 1 — Summary file contains stderr noise
+### Finding 1 — `/ultrareview` skill missing
+- **File:** `12-ultra-review.md:20-24`
+- **Severity:** Medium
+- **Action:** defer
+- **Rationale:** Pre-existing gap carried forward by the renumbering, not introduced by SDLC-2; fixing it requires either adding a skill or rewriting the step's procedure, both of which are out of scope for a PR whose theme is "decouple test authoring, execution, and repair." Captured as SDLC follow-up in this action log. The existing workflow (orchestrator records the sentinel-or-review as Step 12 output and the operator triages in `## Actions`) is functional.
+- **Follow-up ticket:** SDLC-3 (to be opened) — "Ship `/ultrareview` with the package or add a prompt-based fallback to `12-ultra-review.md`."
 
-- **Action:** Fix
-- **Rationale:** Clean summary contract is the load-bearing invariant the Step 10 remediation (pinned `--output-format text`) was already reinforcing; leaving stderr in the summary re-opens the same silent-break class of bug. Change execute.sh so claude's stdout is written to `$summary_file` directly while the combined stream still reaches `$log_file` for debugging. Preserves live-streaming visibility.
-- **Commit:** Included in `fix(sdlc): address ultra-review findings`.
+### Finding 2 — SIGPIPE in `sdlc_test_results_status`
+- **File:** `orchestrator/lib/test_fix_loop.sh:15-29`
+- **Severity:** Medium
+- **Action:** fix
+- **Rationale:** Newly-introduced code in this PR, latent correctness bug that triggers on large reports, easy single-file fix that the existing unit tests in `test_fix_loop_unit_test.sh` pin.
+- **Commit SHA:** `e9a4eda`
 
-### Finding 2 — `CLAUDE_EXTRA_ARGS` example uses nonexistent `--max-turns`
+### Finding 3 — Spec/parser drift over `Result:` state model
+- **File:** `06-run-tests.md:70-72`
+- **Severity:** Low
+- **Action:** fix
+- **Rationale:** Newly-introduced step file; one-line doc addition that makes the parser's UNKNOWN bucket explicit so future readers and agents understand loop behavior.
+- **Commit SHA:** `e9a4eda`
 
-- **Action:** Fix
-- **Rationale:** Template examples are copy-pasted verbatim into production overrides; this one currently 100% breaks invocation. Replace with two real claude CLI flags (`--max-budget-usd 10.00 --fallback-model claude-sonnet-4-6`) in both the template and the integration test so the test continues to prove multi-token word-splitting against a string that operators can actually use.
-- **Commit:** Included in `fix(sdlc): address ultra-review findings`.
+### Finding 4 — Step 7 missing "no results file" guidance
+- **File:** `07-fix-test-failures.md:9-21`
+- **Severity:** Low
+- **Action:** fix
+- **Rationale:** Newly-introduced step; the `--only 07-…` escape hatch is tested and documented, so the missing-file case is a real operator-visible gap. Small addition to the Prerequisites and Procedure sections.
+- **Commit SHA:** `e9a4eda`
 
-### Finding 3 — Step 11 depends on `/ultrareview` skill that isn't bundled
+### Finding 5 — `DEFAULT_RETRIES` naming
+- **File:** `orchestrator/config.sh:23,50-58`
+- **Severity:** Low
+- **Action:** defer
+- **Rationale:** Pre-existing misnomer; fixing it is a mechanical rename across `config.sh`, `run-pipeline.sh`, every test referencing `STEP_RETRY_COUNTS`, and any downstream `.sdlc/overrides.sh`. The rename is not thematic to SDLC-2 and would inflate this PR's already-large diff.
+- **Follow-up ticket:** SDLC-4 (to be opened) — "Rename `STEP_RETRY_COUNTS` to `STEP_MAX_ATTEMPTS` (or adjust the loop semantics)."
 
-- **Action:** Defer
-- **Rationale:** Two plausible remediations — (a) ship the `/ultrareview` skill as part of this package; (b) rewrite the step to inline an equivalent review prompt that doesn't require the skill. Both exceed a single-commit ultra-review fix and both change the intent of the PR the task description defined ("add a dedicated Step 11 ultra-review stage that captures `/ultrareview` findings"). The Step 11 procedure text, its canonical output filename, and its required-patterns entry should stay as-is for this PR; a follow-up should decide between (a) and (b). Today's run documented the tool substitution transparently in the "Tool note" section above.
-- **Follow-up ticket:** `SDLC-FOLLOWUP-ULTRAREVIEW-SKILL` — "Bundle `/ultrareview` skill with the SDLC package, or replace the Step 11 slash-command invocation with an inline review prompt, and document the skill as a prerequisite in README.md."
+### Finding 6 — `STEP_REQUIRED_PATTERNS` validates existence, not freshness
+- **File:** `orchestrator/lib/validate.sh:33-48`
+- **Severity:** Low
+- **Action:** defer
+- **Rationale:** Pre-existing validator behavior, not introduced by SDLC-2. The concrete impact on the test-fix loop is real but requires agent failure to trigger. Adding a freshness check is a semantic change to the validator that affects every step with a required pattern (spec, PR body, semantic report, ultra-review, test results), not just Step 6.
+- **Follow-up ticket:** SDLC-5 (to be opened) — "`validate_step` should assert required outputs have an mtime at-or-after the step invocation."
 
-### Finding 4 — Required-pattern check is existence-only
+### Finding 7 — Redundant env assignments in `bin_wrappers_unit_test.sh`
+- **File:** `tests/bin_wrappers_unit_test.sh:42-44`
+- **Severity:** Low
+- **Action:** fix
+- **Rationale:** Newly-introduced test code; the leading `PATH=… HOME=…` are misleading dead code that a future reader would spend time decoding. Three-line cleanup with no behavior change.
+- **Commit SHA:** `e9a4eda`
 
-- **Action:** Reject
-- **Rationale:** This is the same validator-enhancement class Step 9's semantic review already flagged (Block 2) and Step 10 consciously left unfixed because `STEP_REQUIRED_PATTERNS` is a file-glob matcher, not a content matcher — extending it to content assertions is a generalised enhancement that affects every step, not a Step 11-specific fix. Reopening would contradict Step 10's documented decision.
+## Summary
 
-### Finding 5 — `CLAUDE_EXTRA_ARGS` can override pinned flags
+- 7 findings surfaced.
+- 4 fixes applied on this branch (Findings 2, 3, 4, 7). See commit below.
+- 3 deferred to follow-up tickets (Findings 1, 5, 6) — all pre-existing / out-of-scope for SDLC-2's "decouple test steps" theme.
+- 0 rejected.
 
-- **Action:** Reject
-- **Rationale:** Users who configure `CLAUDE_EXTRA_ARGS` are accepting responsibility for the resulting argv. Adding a reserved-flag check or a deny-list would couple `CLAUDE_EXTRA_ARGS` parsing to the orchestrator's pinned-flag list and mushroom the validation surface for a scenario that is opt-in. Finding 1's fix already removes the most damaging downstream consequence (stderr pollution is no longer the silent consumer of the output-format contract).
+Status: READY

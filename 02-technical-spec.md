@@ -61,6 +61,12 @@
    - Which integration paths require end-to-end coverage.
    - Any fixtures, mocks, or seed data needed.
 
+   This section becomes the input to Step 3 (test authoring), which will turn it
+   into committed tests **before** Step 4 implements anything. Be specific
+   enough that Step 3 can derive concrete test cases — function/method names,
+   expected error types, and edge cases — without inventing details. If the
+   strategy is too thin, Step 3 will return BLOCKED and route back here.
+
 4. **Self-review the spec** against the ticket's acceptance criteria. Every criterion must trace to at least one item in the change plan and one item in the test strategy.
 
 ## Outputs

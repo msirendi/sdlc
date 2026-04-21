@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semantic Diff Report: SDLC-2</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-alt: #0f1720;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --heading: #f0f6fc;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --unclear: #db6d28;
+      --code-bg: #010409;
+      --code-border: #21262d;
+      --inline: #79c0ff;
+      --kw: #ff7b72;
+      --fn: #d2a8ff;
+      --var: #ffa657;
+      --str: #a5d6ff;
+      --num: #79c0ff;
+      --com: #8b949e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0d1117 0%, #0b1220 100%);
+      color: var(--text);
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    a { color: var(--accent); }
+
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    .hero {
+      padding: 24px 28px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(13,17,23,0.9));
+      box-shadow: 0 20px 60px rgba(1, 4, 9, 0.35);
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      color: var(--heading);
+      line-height: 1.25;
+    }
+
+    h1 { margin-top: 10px; font-size: 32px; }
+    h2 { font-size: 22px; }
+
+    h3 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    p { margin: 0 0 10px; }
+
+    .summary {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(22, 27, 34, 0.72);
+      color: var(--heading);
+      font-size: 13px;
+    }
+
+    .lead {
+      max-width: 980px;
+      margin-top: 14px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 22px;
+      margin-top: 26px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(22, 27, 34, 0.95);
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(1, 4, 9, 0.24);
+    }
+
+    .card-head {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(88,166,255,0.06), rgba(22,27,34,0));
+    }
+
+    .paths {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .path {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(13, 17, 23, 0.7);
+      color: var(--inline);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+      gap: 0;
+    }
+
+    .pane { padding: 22px 24px 24px; }
+
+    .pane + .pane {
+      border-left: 1px solid var(--border);
+      background: var(--panel-alt);
+    }
+
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 0 0 10px; }
+
+    .audit-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .audit-item {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(13, 17, 23, 0.56);
+    }
+
+    .audit-item.strong    { border-left: 4px solid var(--success); }
+    .audit-item.probable  { border-left: 4px solid var(--warn); }
+    .audit-item.weak      { border-left: 4px solid var(--danger);  background: rgba(248, 81, 73, 0.08); }
+    .audit-item.unclear   { border-left: 4px solid var(--unclear); background: rgba(219, 109, 40, 0.08); }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge.strong   { background: rgba(63, 185, 80, 0.18);  color: #7ee787; }
+    .badge.probable { background: rgba(210, 153, 34, 0.18); color: #e3b341; }
+    .badge.weak     { background: rgba(248, 81, 73, 0.18);  color: #ff938a; }
+    .badge.unclear  { background: rgba(219, 109, 40, 0.18); color: #ffb77c; }
+
+    .code-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .snippet {
+      margin: 0 0 16px;
+      border: 1px solid var(--code-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--code-bg);
+    }
+
+    .snippet-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--code-border);
+      background: #0d1117;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      color: var(--text);
+      font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .kw  { color: var(--kw); }
+    .fn  { color: var(--fn); }
+    .var { color: var(--var); }
+    .str { color: var(--str); }
+    .num { color: var(--num); }
+    .com { color: var(--com); font-style: italic; }
+    .op  { color: #c9d1d9; }
+
+    code.inline {
+      padding: 0.15em 0.35em;
+      border-radius: 6px;
+      background: rgba(110, 118, 129, 0.18);
+      color: var(--inline);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95em;
+    }
+
+    .footer-card { padding: 24px; }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .footer-box {
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(13, 17, 23, 0.56);
+    }
+
+    .footer-box h3 { margin-top: 0; }
+
+    .muted { color: var(--muted); }
+
+    @media (max-width: 1040px) {
+      .grid { grid-template-columns: 1fr; }
+      .pane + .pane { border-left: 0; border-top: 1px solid var(--border); }
+    }
+
+    @media (max-width: 720px) {
+      .wrap { padding: 18px 14px 30px; }
+      h1 { font-size: 26px; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Semantic Diff Report</div>
+      <h1>SDLC-2: Decouple test authoring, execution, and repair</h1>
+      <p class="lead">
+        This branch restructures the pipeline around one idea: each Claude invocation should have a single job.
+        Tests are now authored (Step&nbsp;3) <em>before</em> implementation (Step&nbsp;4), running tests (Step&nbsp;6)
+        is a pure reporter, and fixing failing tests (Step&nbsp;7) is a separate code-only pass. The orchestrator,
+        not the agent, drives the 6↔7 loop. Most of the churn — the 03→17 renumbering of step files and the
+        equivalent pointer updates in tests, README, and overrides — is mechanical. The genuinely novel pieces are
+        the <code class="inline">Result:</code> parse contract, the test-fix loop helper, the manifest filter that
+        suppresses duplicate top-level Step&nbsp;7 runs, and four new PATH-installable <code class="inline">bin/</code>
+        wrappers.
+      </p>
+      <div class="summary">
+        <div class="pill">Compare: <code class="inline">main...marek/sdlc-2-decouple-tests</code></div>
+        <div class="pill">Diff size: 42 files, +1,221 / −400</div>
+        <div class="pill">Commits on branch: 2 (<code class="inline">121c789</code>, <code class="inline">ea8b13e</code>)</div>
+        <div class="pill">New step files: <code class="inline">03-tests.md</code>, <code class="inline">04-implement.md</code>, <code class="inline">07-fix-test-failures.md</code></div>
+        <div class="pill">New orchestrator file: <code class="inline">lib/test_fix_loop.sh</code></div>
+        <div class="pill">New wrappers: 4</div>
+      </div>
+    </section>
+
+    <div class="stack">
+
+      <!-- ============================================================= -->
+      <!-- Block 1 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 1: Decouple test authoring, implementation, execution, and repair into four numbered steps</h2>
+          <div class="paths">
+            <span class="path">03-tests.md</span>
+            <span class="path">04-implement.md</span>
+            <span class="path">06-run-tests.md</span>
+            <span class="path">07-fix-test-failures.md</span>
+            <span class="path">02-technical-spec.md</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Split what used to be a single <em>implement-and-test</em> loop into four purpose-isolated step files so
+              that each Claude Code invocation has exactly one responsibility: write the contract, implement against it,
+              run it, or fix the code that violates it.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              The staged requirements explicitly call out the problem: under the old ordering Step&nbsp;3 was implementation
+              and Step&nbsp;5 was tests, which let implementations shape tests rather than the other way around, and the
+              old Step&nbsp;6 combined running tests with fixing them, conflating diagnosis with repair. The new files are
+              pure contracts — 03 <em>only</em> writes tests, 04 <em>only</em> implements against committed tests, 06
+              <em>only</em> runs, 07 <em>only</em> fixes. Each guardrail section explicitly forbids the other steps'
+              responsibilities.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">03-tests.md</code> derives tests from <code class="inline">.sdlc/artifacts/technical-spec.md</code>
+                only, commits them in a red state, and returns <code class="inline">BLOCKED</code> if the spec is ambiguous.
+                This is the mechanism by which the spec becomes an executable contract for Step&nbsp;4 — a direct encoding
+                of the acceptance criterion.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">04-implement.md</code> explicitly forbids running tests and editing test files; it
+                routes <code class="inline">BLOCKED</code> back to Step&nbsp;2 (spec) or Step&nbsp;3 (tests) when the contract
+                is wrong. This is what keeps the implementer from silently rewriting the tests to match convenient code.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">06-run-tests.md</code> mandates the first non-blank <code class="inline">Result: PASS|FAIL</code>
+                line and spells out the exact report schema the orchestrator parses. The guardrail <em>"Do not write
+                Result: PASS to make the pipeline proceed"</em> directly defends the loop contract.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">07-fix-test-failures.md</code> reads the report, treats tests as read-only, forbids
+                test-suite execution, and exits <code class="inline">BLOCKED</code> when a test is genuinely wrong. Every
+                rule here exists to keep the 6↔7 loop's iteration count honest.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <code class="inline">02-technical-spec.md</code> gains a paragraph that tells the spec author to be
+                concrete enough that Step&nbsp;3 can derive test cases without inventing details. This is an upstream
+                nudge rather than an enforcement — the guardrail that actually protects the contract lives in Step&nbsp;3's
+                <code class="inline">BLOCKED</code> rule.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The cross-references between the step files (<em>"Step 6 owns execution"</em>, <em>"Step 7 owns repair"</em>,
+                etc.) are load-bearing for the reader, but they do drift risk into the four files — if one is renamed or
+                resequenced in a future ticket, all four must be updated together. This is accepted cost, not a defect.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The renumbering cascade (05-agents-md-check through 17-cleanup) is mechanical. It is justified because
+                the new tests-before-implementation ordering forces it, but it is also the bulk of the diff, and each
+                renamed file is an opportunity for an orphaned reference elsewhere. The accompanying test updates
+                (Block&nbsp;6) are how we know nothing was missed.
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>Running <code class="inline">sdlc --only 03-tests.md</code> now expects to produce red tests and exit <code class="inline">READY</code>, not a green run.</li>
+              <li>Step&nbsp;4 will refuse to run the suite; any prior habit of <code class="inline">npm test</code> at the end of implementation is explicitly forbidden.</li>
+              <li>Step&nbsp;6 no longer modifies code: a red suite means Step&nbsp;6 exits cleanly with <code class="inline">Result: FAIL</code>, and the orchestrator (not the agent) schedules Step&nbsp;7.</li>
+              <li>Step&nbsp;7 never edits test files — a genuinely wrong test routes back to Step&nbsp;2/3 via <code class="inline">BLOCKED</code>.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Confirm every one of the four new step files references the correct partner step number in every <em>"see Step X"</em> sentence — these are the easiest places for renumbering to go subtly wrong.</li>
+              <li>Verify the <code class="inline">Result:</code> line example in <code class="inline">06-run-tests.md</code> matches the exact regex in <code class="inline">orchestrator/lib/test_fix_loop.sh</code> (case-insensitive, leading whitespace allowed, first-line-wins).</li>
+              <li>Sanity-check the <code class="inline">BLOCKED</code> escape paths: Step 3's ambiguity case, Step 4's conflict case, Step 7's wrong-test case. All three have to exit non-<code class="inline">READY</code> cleanly or the loop will silently accept a bad state.</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>03-tests.md — guardrail for BLOCKED-on-ambiguity</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">03-tests.md · L28, L77</div>
+<pre>   <span class="com">If the spec is ambiguous about a signature or shape, choose the</span>
+   <span class="com">simplest interpretation that satisfies the acceptance criteria</span>
+   <span class="com">and record the choice in a code comment on the test (the</span>
+   <span class="com">implementer must conform to the test, not the other way around).</span>
+   <span class="com">If a choice is genuinely undecidable from the spec, return BLOCKED</span>
+   <span class="com">and ask Step 2 to revise.</span>
+
+## Guardrails
+- <span class="str">Do not rely on the spec to be self-evident</span> — if the spec is
+  ambiguous about a signature or behavior, return <span class="kw">BLOCKED</span>
+  rather than guess silently. Step 2 owns spec changes.</pre>
+            </div>
+
+            <div class="code-title"><span>04-implement.md — no test-suite execution, no test edits</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">04-implement.md · L69, L79</div>
+<pre>8. <span class="kw">Build sanity check</span> after each commit:
+   - Confirm the project still builds, type-checks, and imports cleanly.
+   - <span class="str">Do not run the test suite, individual tests, or any</span>
+     <span class="str">test-runner command in this step.</span> Test execution is
+     Step 6's job. Running tests here re-couples writing code with
+     running tests, which is exactly what this pipeline separates.
+
+## Guardrails
+- <span class="str">Do not run the test suite or any individual test in this step.</span>
+- <span class="str">Do not modify the test files committed by Step 3.</span>
+  If they are wrong, return <span class="kw">BLOCKED</span> and route
+  to Step 2 (spec) or Step 3 (regenerate tests).</pre>
+            </div>
+
+            <div class="code-title"><span>06-run-tests.md — Result: parse contract</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">06-run-tests.md · L38–L72</div>
+<pre># Test Results
+
+Result: PASS
+Run at: &lt;ISO 8601 timestamp&gt;
+Command: &lt;exact test command(s) executed&gt;
+
+## Summary
+- Total: &lt;n&gt;
+- Passed: &lt;n&gt;
+- Failed: &lt;n&gt;
+- Skipped: &lt;n&gt;
+
+<span class="com"># ...</span>
+
+- The first non-blank <span class="kw">Result:</span> line MUST read either
+  <span class="str">Result: PASS</span> or <span class="str">Result: FAIL</span>.
+- <span class="str">Result: PASS</span> if and only if every failing test was
+  confirmed <span class="kw">pre-existing</span> (or there were no failures).
+  Any <span class="kw">branch</span> or unconfirmed failure means
+  <span class="str">Result: FAIL</span>.
+- Do not write <span class="str">Result: PASS</span> to make the pipeline
+  proceed. The orchestrator's loop reads this line to decide whether
+  to invoke Step 7.</pre>
+            </div>
+
+            <div class="code-title"><span>07-fix-test-failures.md — tests are read-only</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">07-fix-test-failures.md · L60–L64</div>
+<pre>## Guardrails
+- <span class="str">Do not modify any test file</span> (no edits, deletes,
+  renames, skips, xfails, weakened assertions, or new mocks inside
+  test files).
+- <span class="str">Do not run the test suite or any individual test</span>
+  — the orchestrator re-invokes Step 6 to verify.
+- Do not bypass a failing test by deleting the calling code path.</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 2 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 2: Orchestrator drives the 06↔07 test-fix loop</h2>
+          <div class="paths">
+            <span class="path">orchestrator/run-pipeline.sh</span>
+            <span class="path">orchestrator/lib/test_fix_loop.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Make the orchestrator — not the Claude agent — the authority that decides when to re-run tests and when
+              to invoke the fix pass. Step&nbsp;6 writes a parseable <code class="inline">Result:</code> marker;
+              <code class="inline">execute_test_loop()</code> reads it and iterates Step&nbsp;7 → Step&nbsp;6 until
+              the report says <code class="inline">PASS</code> or the cap is hit.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              With the old combined run-and-fix step, the agent owned its own retry behavior and the orchestrator had
+              no visibility into iteration count. That made bounded failure impossible: a never-passing suite could
+              loop indefinitely inside one step's timeout, and the pipeline had no stable artifact to inspect between
+              attempts. Extracting the loop into Bash gives the orchestrator a hard iteration cap, per-iteration log
+              separation, and a single source of truth (<code class="inline">.sdlc/artifacts/test-results.md</code>)
+              for the pass/fail decision.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">sdlc_test_results_status()</code> isolates the parse contract in one place:
+                lower-case and leading-whitespace tolerant, first-line-wins, <code class="inline">UNKNOWN</code>
+                on missing/malformed input. The comment <em>"treats UNKNOWN as a non-pass ... silently skipping
+                [fix] after a malformed report would let red branches sail through to the open-PR step"</em>
+                captures the security-over-convenience policy.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">execute_step_with_retries()</code> is extracted from the old inline loop and
+                gains an <code class="inline">iter_suffix</code> parameter so Step&nbsp;6 and Step&nbsp;7 can be
+                re-invoked without their <code class="inline">_attempt*.log</code> files overwriting each other.
+                The prior inline form could not have been re-entered safely.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">execute_test_loop()</code> always runs Step&nbsp;6 first (so the report exists),
+                short-circuits on <code class="inline">PASS</code>, and otherwise iterates up to
+                <code class="inline">MAX_TEST_FIX_ITERATIONS</code> (default&nbsp;3). The iteration cap makes stuck
+                fix loops fail fast instead of consuming the whole pipeline timeout.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The manifest filter (<em>"drop Step 07 from FILTERED_STEPS when Step 06 is planned"</em>) prevents
+                the outer <code class="inline">for</code> loop from running Step&nbsp;7 a second time after the
+                inner loop already ran it. Crucially, it preserves the escape hatch where
+                <code class="inline">--only&nbsp;07-fix-test-failures.md</code> without Step&nbsp;6 keeps Step&nbsp;7
+                in the plan.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                Treating the fix step's step-runner failure (exit of <code class="inline">execute_step_with_retries</code>)
+                as a hard halt for the whole pipeline is the right default, but it means a single flaky fix attempt can
+                surface as a pipeline failure rather than retrying at the loop layer. Reviewers should confirm the
+                retry budget on <code class="inline">07-fix-test-failures.md</code> (currently <code class="inline">2</code>)
+                is enough before the loop gives up.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The inner-loop log suffix scheme (<code class="inline">_iter1</code>, <code class="inline">_iter2</code>)
+                is a reasonable scheme but the status command and any log-reading tooling must be aware of it; the
+                summary in <code class="inline">sdlc-status</code> may flatten iterations into a single line.
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>A failing suite now produces a deterministic sequence: 06, 07(iter 1), 06(iter 1), 07(iter 2), 06(iter 2), …</li>
+              <li>A malformed <code class="inline">test-results.md</code> (parsed as <code class="inline">UNKNOWN</code>) invokes Step&nbsp;7 and re-runs Step&nbsp;6 rather than being quietly accepted.</li>
+              <li>Step&nbsp;7 no longer appears as a standalone line in the planned-steps manifest when Step&nbsp;6 is also planned.</li>
+              <li>Operators retain direct access: <code class="inline">sdlc --only 07-fix-test-failures.md</code> runs Step&nbsp;7 alone (no loop).</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Confirm the <code class="inline">UNKNOWN → fix-runs-anyway</code> policy is desired. The alternative (halt-on-malformed) would be less forgiving but catches a broken Step&nbsp;6 sooner.</li>
+              <li>Verify <code class="inline">execute_step_with_retries</code>'s <code class="inline">local exit_code=$?</code> capture still respects <code class="inline">set -e</code> behavior inside its callers — it is guarded by <code class="inline">set +e / set -e</code>, but the extraction widens the surface area.</li>
+              <li>Check that the removal of the original <code class="inline">success=false</code> / <code class="inline">break</code> pattern did not drop a retry path (every retry attempt must still be visible in the log directory).</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>orchestrator/lib/test_fix_loop.sh — Result: parser</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/lib/test_fix_loop.sh · L1–L25</div>
+<pre><span class="com">#!/usr/bin/env bash</span>
+
+<span class="com"># Read the first `Result:` line from a test-results report and echo PASS,</span>
+<span class="com"># FAIL, or UNKNOWN. The orchestrator treats UNKNOWN as a non-pass: the fix</span>
+<span class="com"># step still runs, because silently skipping it after a malformed report</span>
+<span class="com"># would let red branches sail through to the open-PR step.</span>
+<span class="fn">sdlc_test_results_status</span>() {
+  <span class="kw">local</span> results_file=<span class="str">"$1"</span>
+  <span class="kw">if</span> [[ -z <span class="str">"$results_file"</span> || ! -f <span class="str">"$results_file"</span> ]]; <span class="kw">then</span>
+    <span class="fn">printf</span> <span class="str">'UNKNOWN\n'</span>
+    <span class="kw">return</span>
+  <span class="kw">fi</span>
+  <span class="kw">local</span> marker
+  marker=$(<span class="fn">sed</span> -n <span class="str">'s/^[[:space:]]*Result:[[:space:]]*//Ip'</span> <span class="str">"$results_file"</span> | <span class="fn">head</span> -n <span class="num">1</span>)
+  marker=$(<span class="fn">printf</span> <span class="str">'%s'</span> <span class="str">"$marker"</span> | <span class="fn">tr</span> <span class="str">'[:lower:]'</span> <span class="str">'[:upper:]'</span>)
+  <span class="kw">case</span> <span class="str">"$marker"</span> <span class="kw">in</span>
+    PASS*) <span class="fn">printf</span> <span class="str">'PASS\n'</span> ;;
+    FAIL*) <span class="fn">printf</span> <span class="str">'FAIL\n'</span> ;;
+    *)     <span class="fn">printf</span> <span class="str">'UNKNOWN\n'</span> ;;
+  <span class="kw">esac</span>
+}</pre>
+            </div>
+
+            <div class="code-title"><span>orchestrator/run-pipeline.sh — manifest filter</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/run-pipeline.sh · L153–L174</div>
+<pre><span class="com"># When the run-tests step (06) is planned, the fix-test-failures step (07) is</span>
+<span class="com"># driven internally by the test-fix loop and must not also appear as a separate</span>
+<span class="com"># top-level step — so drop it from the manifest. If the operator targeted 07</span>
+<span class="com"># directly (without 06), keep it; the for-loop will run it standalone.</span>
+test_run_step_planned=<span class="kw">false</span>
+<span class="kw">for</span> step_file <span class="kw">in</span> <span class="str">"${FILTERED_STEPS[@]}"</span>; <span class="kw">do</span>
+  <span class="kw">if</span> [[ <span class="str">"$(basename "$step_file")"</span> == <span class="str">"$TEST_RUN_STEP"</span> ]]; <span class="kw">then</span>
+    test_run_step_planned=<span class="kw">true</span>
+    <span class="kw">break</span>
+  <span class="kw">fi</span>
+<span class="kw">done</span>
+
+<span class="kw">if</span> [[ <span class="str">"$test_run_step_planned"</span> == <span class="str">"true"</span> ]]; <span class="kw">then</span>
+  REMAINING_STEPS=()
+  <span class="kw">for</span> step_file <span class="kw">in</span> <span class="str">"${FILTERED_STEPS[@]}"</span>; <span class="kw">do</span>
+    <span class="kw">if</span> [[ <span class="str">"$(basename "$step_file")"</span> == <span class="str">"$TEST_FIX_STEP"</span> ]]; <span class="kw">then</span>
+      <span class="kw">continue</span>
+    <span class="kw">fi</span>
+    REMAINING_STEPS+=(<span class="str">"$step_file"</span>)
+  <span class="kw">done</span>
+  FILTERED_STEPS=(<span class="str">"${REMAINING_STEPS[@]}"</span>)
+<span class="kw">fi</span></pre>
+            </div>
+
+            <div class="code-title"><span>orchestrator/run-pipeline.sh — execute_test_loop</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/run-pipeline.sh · L299–L345</div>
+<pre><span class="com"># Drive the run-tests / fix-test-failures loop. Step 6 always runs first so</span>
+<span class="com"># the report exists. After each Step 6 result, if it is FAIL/UNKNOWN we run</span>
+<span class="com"># Step 7 and re-run Step 6, up to MAX_TEST_FIX_ITERATIONS fix passes.</span>
+<span class="fn">execute_test_loop</span>() {
+  <span class="kw">local</span> run_step_file=<span class="str">"$1"</span>
+  <span class="kw">local</span> fix_step_file=<span class="str">"$STEPS_DIR/$TEST_FIX_STEP"</span>
+  <span class="kw">local</span> results_file=<span class="str">"$REPO_ROOT/$TEST_RESULTS_REL"</span>
+  <span class="kw">local</span> results_status
+
+  <span class="kw">if</span> [[ ! -f <span class="str">"$fix_step_file"</span> ]]; <span class="kw">then</span>
+    <span class="fn">sdlc_log</span> <span class="str">"ERROR"</span> <span class="str">"Fix step file is missing: $fix_step_file"</span>
+    <span class="kw">return</span> <span class="num">1</span>
+  <span class="kw">fi</span>
+
+  <span class="kw">if</span> ! <span class="fn">execute_step_with_retries</span> <span class="str">"$run_step_file"</span>; <span class="kw">then</span>
+    <span class="kw">return</span> <span class="num">1</span>
+  <span class="kw">fi</span>
+
+  results_status=$(<span class="fn">sdlc_test_results_status</span> <span class="str">"$results_file"</span>)
+  <span class="kw">if</span> [[ <span class="str">"$results_status"</span> == <span class="str">"PASS"</span> ]]; <span class="kw">then</span>
+    <span class="fn">sdlc_log</span> <span class="str">"INFO"</span> <span class="str">"Test suite is green after the initial run; skipping $TEST_FIX_STEP."</span>
+    <span class="kw">return</span> <span class="num">0</span>
+  <span class="kw">fi</span>
+
+  <span class="kw">local</span> iter=<span class="num">1</span>
+  <span class="kw">while</span> [[ <span class="str">"$iter"</span> -le <span class="str">"$MAX_TEST_FIX_ITERATIONS"</span> ]]; <span class="kw">do</span>
+    <span class="fn">sdlc_log</span> <span class="str">"INFO"</span> <span class="str">"Test results: $results_status. Running fix iteration $iter/$MAX_TEST_FIX_ITERATIONS."</span>
+    <span class="kw">if</span> ! <span class="fn">execute_step_with_retries</span> <span class="str">"$fix_step_file"</span> <span class="str">"$iter"</span>; <span class="kw">then</span>
+      <span class="fn">sdlc_log</span> <span class="str">"ERROR"</span> <span class="str">"Fix step $TEST_FIX_STEP failed on iteration $iter."</span>
+      <span class="kw">return</span> <span class="num">1</span>
+    <span class="kw">fi</span>
+
+    <span class="kw">if</span> ! <span class="fn">execute_step_with_retries</span> <span class="str">"$run_step_file"</span> <span class="str">"$iter"</span>; <span class="kw">then</span>
+      <span class="fn">sdlc_log</span> <span class="str">"ERROR"</span> <span class="str">"Re-run of $TEST_RUN_STEP failed on iteration $iter."</span>
+      <span class="kw">return</span> <span class="num">1</span>
+    <span class="kw">fi</span>
+
+    results_status=$(<span class="fn">sdlc_test_results_status</span> <span class="str">"$results_file"</span>)
+    <span class="kw">if</span> [[ <span class="str">"$results_status"</span> == <span class="str">"PASS"</span> ]]; <span class="kw">then</span>
+      <span class="fn">sdlc_log</span> <span class="str">"INFO"</span> <span class="str">"Test suite passed after fix iteration $iter."</span>
+      <span class="kw">return</span> <span class="num">0</span>
+    <span class="kw">fi</span>
+
+    iter=$((iter + <span class="num">1</span>))
+  <span class="kw">done</span>
+
+  <span class="fn">sdlc_log</span> <span class="str">"ERROR"</span> \
+    <span class="str">"Test suite still $results_status after $MAX_TEST_FIX_ITERATIONS fix iterations; halting."</span>
+  <span class="kw">return</span> <span class="num">1</span>
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 3 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 3: Config renumbering, loop constants, and required-artifact for test-results.md</h2>
+          <div class="paths">
+            <span class="path">orchestrator/config.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Surface the new numbering, the loop's tunable knobs, and the Step&nbsp;6 artifact requirement through the
+              single configuration file every orchestrator script sources.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              <code class="inline">config.sh</code> is the lookup table for timeouts, retry budgets, permission modes,
+              and validation patterns. Every step-number change in Block&nbsp;1 has to be reflected here or
+              <code class="inline">sdlc_lookup_kv</code> would silently fall back to the default timeout (too short
+              for implementation) or the validator would stop requiring canonical artifacts.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">STEP_TIMEOUTS</code> shifts every entry to the new number. Step&nbsp;4 inherits the
+                implementation budget (<code class="inline">7200s</code>) and Step&nbsp;3 gets the test-authoring budget
+                (<code class="inline">3600s</code>), which is exactly what the new ordering requires.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The four new loop constants (<code class="inline">TEST_RUN_STEP</code>,
+                <code class="inline">TEST_FIX_STEP</code>, <code class="inline">TEST_RESULTS_REL</code>,
+                <code class="inline">MAX_TEST_FIX_ITERATIONS</code>) are the knobs the orchestrator and the overrides
+                template reference by name. Declaring them with <code class="inline">${VAR:-default}</code> lets a repo
+                override any single one without redefining the others.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                Adding <code class="inline">06-run-tests.md=.sdlc/artifacts/test-results.md</code> to
+                <code class="inline">STEP_REQUIRED_PATTERNS</code> means <code class="inline">validate_step</code> will
+                fail Step&nbsp;6 if the report is not written — the loop parser can only do its job when the file exists.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                Retry count for Step&nbsp;6 drops from <code class="inline">3</code> to <code class="inline">2</code>.
+                That matches the new contract (running tests should not need many retries — it either runs or it
+                doesn't), but reviewers should confirm flaky test-runners are not expected to need three shots.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                Step&nbsp;7 gets a dedicated timeout (<code class="inline">5400s</code>) and retry budget
+                (<code class="inline">2</code>). <code class="inline">2</code> attempts × up to 3 loop iterations
+                = up to 6 fix-step invocations per pipeline run. That is fine, but it is worth noting in the overrides
+                template how those compound.
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>Every old step-number lookup now resolves against the new number; any stale override in a target repo's <code class="inline">.sdlc/overrides.sh</code> will silently miss and fall through to the default.</li>
+              <li><code class="inline">MAX_TEST_FIX_ITERATIONS=3</code> caps the loop regardless of retry budgets, so a pathological repo gets at most 3 fix passes before the orchestrator surfaces the failure.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Confirm downstream target repos' <code class="inline">overrides.sh</code> files will not silently break. There is no compatibility shim here — an old override referencing <code class="inline">03-implement.md</code> simply stops taking effect.</li>
+              <li>Spot-check: Step&nbsp;1 is the only automated step without an explicit retry count; is that intentional?</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>orchestrator/config.sh — renumbered STEP_TIMEOUTS</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/config.sh · L28–L44</div>
+<pre>STEP_TIMEOUTS=(
+  <span class="str">"01-branch-setup.md=1200"</span>
+  <span class="str">"02-technical-spec.md=1800"</span>
+  <span class="str">"03-tests.md=3600"</span>
+  <span class="str">"04-implement.md=7200"</span>
+  <span class="str">"05-agents-md-check.md=1800"</span>
+  <span class="str">"06-run-tests.md=5400"</span>
+  <span class="str">"07-fix-test-failures.md=5400"</span>
+  <span class="str">"08-open-pr.md=1800"</span>
+  <span class="str">"09-review-comments.md=3600"</span>
+  <span class="str">"10-semantic-diff-report.md=2400"</span>
+  <span class="str">"11-address-findings.md=3600"</span>
+  <span class="str">"12-ultra-review.md=3600"</span>
+  <span class="str">"13-push-and-hooks.md=1800"</span>
+  <span class="str">"14-fix-ci.md=5400"</span>
+  <span class="str">"15-rebase.md=2400"</span>
+)</pre>
+            </div>
+
+            <div class="code-title"><span>orchestrator/config.sh — loop constants</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/config.sh · L56–L63</div>
+<pre><span class="com"># Test-fix loop: after Step 6 (run-tests) writes its report, the orchestrator</span>
+<span class="com"># re-invokes Step 7 (fix) and then Step 6 again until the report's `Result:`</span>
+<span class="com"># line reads PASS or this iteration cap is hit. Decoupling 'run' from 'fix'</span>
+<span class="com"># is the whole point — keep them separate Claude invocations.</span>
+TEST_RUN_STEP=<span class="str">"${TEST_RUN_STEP:-06-run-tests.md}"</span>
+TEST_FIX_STEP=<span class="str">"${TEST_FIX_STEP:-07-fix-test-failures.md}"</span>
+TEST_RESULTS_REL=<span class="str">"${TEST_RESULTS_REL:-.sdlc/artifacts/test-results.md}"</span>
+MAX_TEST_FIX_ITERATIONS=<span class="str">"${MAX_TEST_FIX_ITERATIONS:-3}"</span></pre>
+            </div>
+
+            <div class="code-title"><span>orchestrator/config.sh — required test-results artifact</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">orchestrator/config.sh · L69–L76</div>
+<pre>STEP_REQUIRED_PATTERNS=(
+  <span class="str">"02-technical-spec.md=.sdlc/artifacts/technical-spec.md"</span>
+  <span class="str">"06-run-tests.md=.sdlc/artifacts/test-results.md"</span>
+  <span class="str">"08-open-pr.md=.sdlc/artifacts/pr-body.md"</span>
+  <span class="str">"10-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html"</span>
+  <span class="str">"11-address-findings.md=.sdlc/artifacts/semantic-review-actions.md"</span>
+  <span class="str">"12-ultra-review.md=.sdlc/artifacts/ultra-review.md"</span>
+)</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 4 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 4: PATH-installable command wrappers under bin/</h2>
+          <div class="paths">
+            <span class="path">bin/sdlc</span>
+            <span class="path">bin/sdlc-dry</span>
+            <span class="path">bin/sdlc-init</span>
+            <span class="path">bin/sdlc-status</span>
+            <span class="path">orchestrator/init-target-repo.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Ship four real executable wrappers so operators can run the pipeline from any directory without first
+              exporting <code class="inline">SDLC_HOME</code> or knowing internal script paths.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              Previously the README prescribed shell-function shims that each repo had to paste into
+              <code class="inline">~/.zshrc</code>. That coupled the repo's usability to the operator's dotfiles and
+              meant a freshly-cloned checkout had no direct entry point. Real scripts in <code class="inline">bin/</code>
+              (a convention <code class="inline">npm</code>, <code class="inline">pnpm</code>, <code class="inline">uv</code>,
+              etc. all lean on) let operators prepend one directory to <code class="inline">PATH</code> once and have
+              four commands immediately.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The symlink-safe <code class="inline">_resolve_script_dir</code> helper is what makes
+                <code class="inline">ln -s ~/sdlc/bin/sdlc /usr/local/bin/sdlc</code> work — without it,
+                <code class="inline">SDLC_HOME</code> would resolve to <code class="inline">/usr/local</code>.
+                Every wrapper duplicates the helper for isolation.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">bin/sdlc</code> peels the first positional arg as an optional
+                <code class="inline">repo_path</code> only when it is not a <code class="inline">--flag</code>, so
+                <code class="inline">sdlc --dry-run</code> and <code class="inline">sdlc /path/to/repo --dry-run</code>
+                both work.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">bin/sdlc-dry</code> is a thin <code class="inline">exec $_BIN_DIR/sdlc "$@" --dry-run</code>
+                — no logic duplication, and the flag is appended so the caller cannot accidentally override it.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">bin/sdlc-status</code> exists at all. The prior README only suggested a shell
+                function; now <code class="inline">which sdlc-status</code> actually resolves, which is what the new
+                tests pin.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <code class="inline">init-target-repo.sh</code>'s instructional footer switched from a full-path
+                fallback to <code class="inline">export PATH="$SDLC_HOME/bin:$PATH"</code>. The guidance is cleaner,
+                but a user who already set <code class="inline">SDLC_HOME</code> without touching
+                <code class="inline">PATH</code> will now see a reference to <code class="inline">sdlc-dry</code>
+                they cannot run. The fallback line mitigates this, but it's worth confirming the wording is clear.
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>After <code class="inline">export PATH="$SDLC_HOME/bin:$PATH"</code>, <code class="inline">sdlc</code>, <code class="inline">sdlc-init</code>, <code class="inline">sdlc-dry</code>, and <code class="inline">sdlc-status</code> are all discoverable globally.</li>
+              <li>Symlinks into <code class="inline">/usr/local/bin</code> work without breaking <code class="inline">SDLC_HOME</code>.</li>
+              <li>The init script's "Next" banner now points at <code class="inline">sdlc-dry</code> rather than <code class="inline">orchestrator/run-pipeline.sh --dry-run</code>.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Verify the <code class="inline">while [[ -h "$src" ]]; do … ; done</code> loop terminates on non-symlink endpoints (it does on macOS/Linux via standard <code class="inline">readlink</code>, but it's worth a sanity-check under BSD vs GNU).</li>
+              <li>Check that <code class="inline">sdlc --help</code> still reaches <code class="inline">run-pipeline.sh</code> — the wrapper shifts <code class="inline">--help</code> only when it looks like a path, so the flag is forwarded.</li>
+              <li>Confirm <code class="inline">sdlc-init</code>'s <code class="inline">${1:-$PWD}</code> fallback does not accidentally init <code class="inline">$PWD</code> when the operator meant to pass a flag (there are no flags on <code class="inline">sdlc-init</code> today, but that is a soft contract).</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>bin/sdlc — symlink-safe resolver and flag forwarding</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">bin/sdlc · full file</div>
+<pre><span class="com">#!/usr/bin/env bash</span>
+<span class="com"># Wrapper that invokes the SDLC pipeline runner from any directory.</span>
+<span class="kw">set</span> -euo pipefail
+
+<span class="fn">_resolve_script_dir</span>() {
+  <span class="kw">local</span> src=<span class="str">"${BASH_SOURCE[0]}"</span>
+  <span class="kw">while</span> [[ -h <span class="str">"$src"</span> ]]; <span class="kw">do</span>
+    <span class="kw">local</span> dir
+    dir=<span class="str">"$(cd -P "$(dirname "$src")" &gt;/dev/null 2&gt;&amp;1 &amp;&amp; pwd)"</span>
+    src=<span class="str">"$(readlink "$src")"</span>
+    [[ <span class="str">"$src"</span> != /* ]] &amp;&amp; src=<span class="str">"$dir/$src"</span>
+  <span class="kw">done</span>
+  <span class="fn">cd</span> -P <span class="str">"$(dirname "$src")"</span> &gt;/dev/null 2&gt;&amp;1 &amp;&amp; <span class="fn">pwd</span>
+}
+
+_BIN_DIR=<span class="str">"$(_resolve_script_dir)"</span>
+: <span class="str">"${SDLC_HOME:="$(cd "$_BIN_DIR/.." &gt;/dev/null 2&gt;&amp;1 &amp;&amp; pwd)"}"</span>
+<span class="kw">export</span> SDLC_HOME
+
+repo_path=<span class="str">"$PWD"</span>
+<span class="kw">if</span> [[ $# -gt <span class="num">0</span> &amp;&amp; <span class="str">"$1"</span> != -* ]]; <span class="kw">then</span>
+  repo_path=<span class="str">"$1"</span>
+  <span class="kw">shift</span>
+<span class="kw">fi</span>
+
+<span class="kw">exec</span> <span class="str">"$SDLC_HOME/orchestrator/run-pipeline.sh"</span> --repo <span class="str">"$repo_path"</span> <span class="str">"$@"</span></pre>
+            </div>
+
+            <div class="code-title"><span>bin/sdlc-dry — re-entrant wrapper</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">bin/sdlc-dry · L16–L19</div>
+<pre>_BIN_DIR=<span class="str">"$(_resolve_script_dir)"</span>
+<span class="kw">exec</span> <span class="str">"$_BIN_DIR/sdlc"</span> <span class="str">"$@"</span> --dry-run</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 5 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 5: Documentation and overrides updated for the new numbering and workflow</h2>
+          <div class="paths">
+            <span class="path">README.md</span>
+            <span class="path">templates/overrides-template.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Align user-facing docs with the new 17-step pipeline and the decoupled test workflow, and document the
+              new <code class="inline">bin/</code> install flow, the <code class="inline">MAX_TEST_FIX_ITERATIONS</code>
+              knob, and the renumbered example commands.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              The README is the first thing a new operator reads. Leaving it pointing at <code class="inline">03-implement.md</code>
+              or a 16-step list would actively mislead them. The overrides template also has to stop advertising step
+              numbers that no longer exist, and to surface the new loop cap as a tunable.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                README now lists all 17 steps with the new ordering and bolds the four decoupled test steps
+                (3/4/6/7). The <em>"Decoupled test workflow"</em> subsection states the 6↔7 loop rule explicitly.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                New <em>"Installing the sdlc commands"</em> section documents <code class="inline">export PATH="$SDLC_HOME/bin:$PATH"</code>
+                as the preferred flow and falls back to symlinks. Replaces the inline shell-function recipe that
+                was fragile across shells.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The overrides template's example timeouts, skip lists, and permission-mode lines all reference the
+                new numbering. Without this, copy/paste from the template into a live repo would silently no-op.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                The template gains an explicit comment block around <code class="inline">MAX_TEST_FIX_ITERATIONS</code>
+                so operators know how to widen or tighten the loop. The commentary explains the trade-off
+                (<em>"Lower this to fail fast in CI; raise it for repos with large suites"</em>).
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                README's canonical-artifacts section now lists <code class="inline">test-results.md</code> with the
+                note that the orchestrator parses its first <code class="inline">Result:</code> line. This is helpful
+                but also creates a documentation obligation: if the parser changes, this note must change too.
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>No runtime behavior — documentation-only — but future copy/paste from examples now targets the correct step numbers.</li>
+              <li>The README's old embedded <code class="inline">sdlc-status()</code> shell-function example is removed; operators who copied it previously will still have a working function, but new operators are steered toward the real wrapper.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Spot-check every number in the README against the actual files on disk — a drift between docs and filenames was the whole reason this ticket landed.</li>
+              <li>Verify the README's claim that <em>"the <code class="inline">export SDLC_HOME=…</code> line is optional"</em> holds even when the wrapper is reached via a symlink (this is what <code class="inline">_resolve_script_dir</code> enables).</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>README.md — decoupled test workflow</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">README.md · "Decoupled test workflow"</div>
+<pre>### Decoupled test workflow
+
+Steps 3, 4, 6, and 7 are intentionally split so each Claude invocation
+has one job:
+
+- Step 3 writes the tests from the spec — no implementation, no test
+  execution.
+- Step 4 implements the code against those tests — no test execution,
+  no test edits.
+- Step 6 runs the suite and writes .sdlc/artifacts/test-results.md —
+  no fixes.
+- Step 7 reads the report and fixes production code — no test edits,
+  no test execution.
+
+The orchestrator drives a 6↔7 loop: after Step 6 writes its report, if
+the first `Result:` line is not `PASS`, Step 7 runs once and Step 6
+re-runs. The loop iterates up to MAX_TEST_FIX_ITERATIONS (default 3)
+before halting.</pre>
+            </div>
+
+            <div class="code-title"><span>templates/overrides-template.sh — new loop knob</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">templates/overrides-template.sh · L20–L24</div>
+<pre><span class="com"># Example: cap how many 06↔07 test-fix iterations the orchestrator drives</span>
+<span class="com"># before halting (defaults to 3). Lower this to fail fast in CI; raise it</span>
+<span class="com"># for repos with large suites where partial fixes are common.</span>
+<span class="com"># MAX_TEST_FIX_ITERATIONS=5</span></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 6 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 6: Automated coverage for the Result: contract, manifest filter, and wrapper discoverability</h2>
+          <div class="paths">
+            <span class="path">tests/test_fix_loop_unit_test.sh</span>
+            <span class="path">tests/bin_wrappers_unit_test.sh</span>
+            <span class="path">tests/pipeline_integration_test.sh</span>
+            <span class="path">tests/config_unit_test.sh</span>
+            <span class="path">tests/run.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Pin the contracts added in Blocks&nbsp;1–4 with Bash-level tests: the <code class="inline">Result:</code>
+              parser, the manifest filter that drops Step&nbsp;7 when Step&nbsp;6 is planned, the new config
+              constants, the wrapper PATH-discoverability, and the renumbered step lookups that already existed.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              Each of the three new contracts can silently break: a parser that misclassifies
+              <code class="inline">Result: PASS</code> would skip fix iterations that were needed; a manifest filter
+              that misfires would run Step&nbsp;7 twice; and a wrapper that is not on <code class="inline">PATH</code>
+              breaks every documented install command. Without pinned tests, any of these can degrade without a red
+              test. The two new suites (<code class="inline">test_fix_loop_unit_test.sh</code> and
+              <code class="inline">bin_wrappers_unit_test.sh</code>) cover exactly those surfaces, and the
+              renumbering touches bring the existing suites into alignment.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">test_fix_loop_unit_test.sh</code> pins eight cases for
+                <code class="inline">sdlc_test_results_status</code>: empty path → UNKNOWN, missing file → UNKNOWN,
+                missing marker → UNKNOWN, PASS, FAIL, case-insensitive, first-line-wins, and leading whitespace.
+                The cases directly reflect the <em>"silent correctness failure"</em> risks the loop carries.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">pipeline_integration_test.sh</code> gains two new cases:
+                <em>"manifest excludes fix step when run step planned"</em> and <em>"manifest includes fix step when
+                targeted directly"</em>. Together they encode the <code class="inline">--only</code> escape hatch
+                and the default-filtering behavior.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">config_unit_test.sh</code> adds explicit assertions for
+                <code class="inline">TEST_RUN_STEP</code>, <code class="inline">TEST_FIX_STEP</code>,
+                <code class="inline">TEST_RESULTS_REL</code>, <code class="inline">MAX_TEST_FIX_ITERATIONS</code>,
+                and the new required-pattern for <code class="inline">06-run-tests.md</code>. Without these, a
+                future override default change would be invisible to the test suite.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <code class="inline">bin_wrappers_unit_test.sh</code>'s PATH-discovery case uses nested
+                <code class="inline">env -i PATH=... command -v NAME</code> calls. The nesting is belt-and-suspenders;
+                reviewers should verify the outer <code class="inline">env -i</code> isn't masked by the inner one's
+                short-circuit.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The dry-run smoke test in <code class="inline">bin_wrappers_unit_test.sh</code> shims
+                <code class="inline">claude</code> to an exit-0 stub. That covers the require-command check, but it
+                means the test cannot detect regressions in the <em>actual</em> Claude Code call path — only the
+                plan-printing code.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                The renumbered updates to <code class="inline">common_unit_test.sh</code>,
+                <code class="inline">context_unit_test.sh</code>, <code class="inline">execute_integration_test.sh</code>,
+                <code class="inline">status_unit_test.sh</code>, <code class="inline">status_integration_test.sh</code>,
+                and <code class="inline">validate_unit_test.sh</code> are mechanical but necessary. They are the
+                enforcement mechanism that keeps Block&nbsp;1's renumbering honest.
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>CI (or <code class="inline">tests/run.sh</code>) will now fail if the <code class="inline">Result:</code> parser loses any of the pinned cases.</li>
+              <li>A future refactor that accidentally re-introduces Step&nbsp;7 into the top-level manifest when Step&nbsp;6 is planned is caught by <code class="inline">test_pipeline_manifest_excludes_fix_step_when_run_step_planned</code>.</li>
+              <li>If a wrapper is removed or renamed, <code class="inline">test_sdlc_is_discoverable_on_path</code> fails before a user notices.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Confirm <code class="inline">tests/run.sh</code>'s order places the new unit suites before integration suites so a parser regression fails fast.</li>
+              <li>Verify <code class="inline">test_sdlc_test_results_status_uses_only_first_result_line</code> matches <code class="inline">head -n 1</code> behavior on the <code class="inline">sed</code> side (it does today, but a future parser rewrite could drift).</li>
+              <li>Check that <code class="inline">test_config_test_fix_loop_constants_have_expected_defaults</code> sources <code class="inline">config.sh</code> in a clean subshell — otherwise a prior test's export could leak in and make the assertion pass for the wrong reason.</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>tests/test_fix_loop_unit_test.sh — first-line-wins</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">tests/test_fix_loop_unit_test.sh · L85–L100</div>
+<pre>test_sdlc_test_results_status_uses_only_first_result_line() {
+  results_fixture
+  <span class="com"># If a later iteration overwrites the report, the first Result: line is the</span>
+  <span class="com"># authoritative one. Pin this so multi-section reports cannot accidentally</span>
+  <span class="com"># tip the orchestrator's decision.</span>
+  <span class="fn">cat</span> &lt;&lt;<span class="str">'EOF'</span> &gt; <span class="str">"$RESULTS_FIXTURE"</span>
+Result: FAIL
+
+## Appendix
+Result: PASS
+EOF
+  <span class="fn">assert_equals</span> <span class="str">"FAIL"</span> <span class="str">"$(sdlc_test_results_status "$RESULTS_FIXTURE")"</span> \
+    <span class="str">"Expected the parser to consider only the first Result: line so appendices</span>
+<span class="str">    cannot override the headline status."</span>
+}</pre>
+            </div>
+
+            <div class="code-title"><span>tests/pipeline_integration_test.sh — escape hatch</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">tests/pipeline_integration_test.sh · L192–L210</div>
+<pre>test_pipeline_manifest_includes_fix_step_when_targeted_directly() {
+  <span class="com"># When the operator targets Step 7 alone via --only, the test-fix loop is not</span>
+  <span class="com"># active (Step 6 is not planned), so Step 7 must appear and run as a normal</span>
+  <span class="com"># standalone step. This is the escape hatch for re-running just the fix pass.</span>
+  <span class="fn">setup_pipeline_fixture</span>
+  <span class="fn">run_pipeline_dry_run</span> --only 07-fix-test-failures.md
+  <span class="fn">assert_exit_code</span> <span class="num">0</span> <span class="str">"$CAPTURED_STATUS"</span> <span class="str">"Expected --only 07-fix-test-failures.md to succeed."</span>
+
+  <span class="kw">local</span> manifest
+  manifest=$(<span class="fn">latest_manifest_path</span>)
+  <span class="kw">local</span> contents
+  contents=$(<span class="fn">cat</span> <span class="str">"$manifest"</span>)
+  <span class="fn">assert_contains</span> <span class="str">"$contents"</span> <span class="str">'- `07-fix-test-failures.md` (automated'</span> \
+    <span class="str">"Expected Step 07 to appear as a top-level planned step when targeted directly."</span>
+  <span class="fn">assert_not_contains</span> <span class="str">"$contents"</span> <span class="str">'- `06-run-tests.md` (automated'</span> \
+    <span class="str">"Did not expect Step 06 in the plan when --only targets Step 07."</span>
+}</pre>
+            </div>
+
+            <div class="code-title"><span>tests/bin_wrappers_unit_test.sh — PATH discoverability</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">tests/bin_wrappers_unit_test.sh · L32–L51</div>
+<pre>test_sdlc_is_discoverable_on_path() {
+  <span class="com"># Simulate the documented install step (export PATH="$SDLC_HOME/bin:$PATH")</span>
+  <span class="com"># in an isolated environment and confirm each command resolves.</span>
+  <span class="fn">use_temp_dir</span>
+  <span class="kw">local</span> fake_home=<span class="str">"$TEST_TEMP_DIR/home"</span>
+  <span class="fn">mkdir</span> -p <span class="str">"$fake_home"</span>
+
+  <span class="kw">local</span> resolved
+  <span class="kw">local</span> name
+  <span class="kw">for</span> name <span class="kw">in</span> sdlc sdlc-init sdlc-dry sdlc-status; <span class="kw">do</span>
+    resolved=$(PATH=<span class="str">"$BIN_DIR:/usr/bin:/bin"</span> HOME=<span class="str">"$fake_home"</span> \
+      <span class="fn">env</span> -i PATH=<span class="str">"$BIN_DIR:/usr/bin:/bin"</span> HOME=<span class="str">"$fake_home"</span> \
+      <span class="fn">command</span> -v <span class="str">"$name"</span> || <span class="kw">true</span>)
+    <span class="kw">if</span> [[ -z <span class="str">"$resolved"</span> ]]; <span class="kw">then</span>
+      <span class="fn">fail</span> <span class="str">"$name is not discoverable on PATH when $BIN_DIR is prepended."</span>
+    <span class="kw">fi</span>
+    <span class="fn">assert_equals</span> <span class="str">"$BIN_DIR/$name"</span> <span class="str">"$(canonicalize_path "$resolved")"</span> \
+      <span class="str">"$name should resolve to the shipped wrapper."</span>
+  <span class="kw">done</span>
+}</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 7 -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 7: Pipeline self-artifacts (task, PR body, recorded test run)</h2>
+          <div class="paths">
+            <span class="path">.sdlc/task.md</span>
+            <span class="path">.sdlc/artifacts/pr-body.md</span>
+            <span class="path">.sdlc/artifacts/test-results.md</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Capture the pipeline's own working files for this ticket — the task definition, the PR body draft, and
+              a recorded green-suite test report — as durable, committed artifacts.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              The SDLC pipeline commits these files as part of normal step execution (Step&nbsp;2 writes
+              <code class="inline">technical-spec.md</code>; Step&nbsp;6 writes <code class="inline">test-results.md</code>;
+              Step&nbsp;8 writes <code class="inline">pr-body.md</code>). Including them on the branch keeps the
+              pipeline's state visible to reviewers and reproducible on replay.
+            </p>
+
+            <h3>Justification audit</h3>
+            <div class="audit-list">
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">.sdlc/artifacts/test-results.md</code> with <code class="inline">Result: PASS</code>
+                on top is <em>exactly</em> the artifact the new parser reads. Committing it serves as a live example
+                and a regression fixture for anyone eyeballing the contract.
+              </div>
+              <div class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <code class="inline">.sdlc/artifacts/pr-body.md</code> matches what was pushed to PR #3 and is what
+                Step&nbsp;8 is expected to produce; reviewing its structure is how a reviewer checks that the step
+                actually emitted the right shape.
+              </div>
+              <div class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <code class="inline">.sdlc/task.md</code> edits are the <em>prompt</em> for this pipeline run, not
+                product code. They belong on the branch because later steps reference the task by path, but they
+                are not code review-load-bearing.
+              </div>
+              <div class="audit-item unclear">
+                <span class="badge unclear">Unclear / possibly superfluous</span>
+                These three artifacts make up a noticeable chunk of the <code class="inline">+1221/-400</code>
+                line-diff count that pushed this PR past the repo's standard size limits. They are load-bearing for
+                pipeline state, but reviewers should confirm that the repo's policy is to keep them committed (as
+                opposed to gitignoring them and relying on run logs).
+              </div>
+            </div>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>The PR's line-diff count includes ~125 lines of SDLC run artifacts; strip these and the PR is much closer to the repo's limits.</li>
+              <li>Future runs of Step&nbsp;6 on this branch will overwrite <code class="inline">test-results.md</code> in place.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Is it policy to commit <code class="inline">.sdlc/artifacts/*</code>, or should some of these be gitignored? The README lists them as canonical outputs, so the current answer is "commit them," but the lines-against-limits tension is worth naming.</li>
+            </ul>
+          </div>
+
+          <div class="pane">
+            <div class="code-title"><span>.sdlc/artifacts/test-results.md — parseable marker</span><span>NEW</span></div>
+            <div class="snippet">
+              <div class="snippet-head">.sdlc/artifacts/test-results.md · first lines</div>
+<pre># Test Results
+
+Result: PASS
+Run at: 2026-04-20T...
+Command: bash tests/run.sh
+
+## Summary
+- Total: 85
+- Passed: 85
+- Failed: 0
+- Skipped: 0</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Footer -->
+      <!-- ============================================================= -->
+      <section class="card footer-card">
+        <h2>Report summary</h2>
+
+        <h3>Overall PR objective</h3>
+        <p>
+          Restructure the SDLC pipeline so tests are authored before implementation, test execution is a pure reporter,
+          and test-failure repair is a separate orchestrated pass, with the orchestrator (not the agent) driving a
+          bounded 6↔7 loop. Every other change — renumbering, config edits, README/overrides updates, and the
+          corresponding test churn — exists to keep that restructuring consistent across the repo.
+        </p>
+
+        <div class="footer-grid">
+          <div class="footer-box">
+            <h3>Potentially superfluous changes</h3>
+            <ul>
+              <li>
+                <strong>Committing <code class="inline">.sdlc/artifacts/*.md</code> onto the feature branch.</strong>
+                The test-results and PR-body artifacts are load-bearing for the pipeline's own state, but they
+                inflate the diff past the repo's documented PR size cap. If the team wants these untracked, the
+                policy change belongs in this ticket.
+              </li>
+              <li>
+                <strong>Paragraph in <code class="inline">02-technical-spec.md</code> about Step 3.</strong>
+                It is a soft nudge; the real guardrail (BLOCKED on ambiguity) already lives in Step 3. Harmless,
+                but the reader might expect enforcement rather than exhortation.
+              </li>
+            </ul>
+          </div>
+
+          <div class="footer-box">
+            <h3>Changes that need author explanation</h3>
+            <ul>
+              <li>
+                Step 6's retry budget dropped from <code class="inline">3</code> to <code class="inline">2</code>.
+                The new contract is run-only, but a flaky test runner may still need a third attempt; confirm this
+                is intentional and not an artifact of the renumbering.
+              </li>
+              <li>
+                The <code class="inline">UNKNOWN → run fix anyway</code> policy on a malformed
+                <code class="inline">test-results.md</code>. Reasonable, but it masks a Step&nbsp;6 regression as a
+                Step&nbsp;7 invocation.
+              </li>
+              <li>
+                No compatibility path for <code class="inline">.sdlc/overrides.sh</code> files in downstream repos
+                that still reference the old step numbers. The silent no-op may confuse operators.
+              </li>
+            </ul>
+          </div>
+
+          <div class="footer-box">
+            <h3>Missing or weak test coverage</h3>
+            <ul>
+              <li>
+                No test exercises the <em>full</em> loop behavior — i.e. Step&nbsp;6 → FAIL → Step&nbsp;7 fixes →
+                Step&nbsp;6 → PASS. <code class="inline">test_fix_loop_unit_test.sh</code> covers the parser in
+                isolation, but nothing simulates the iteration cap being hit or a UNKNOWN→FAIL transition.
+              </li>
+              <li>
+                <code class="inline">MAX_TEST_FIX_ITERATIONS</code> has a config default test but no integration
+                test that overrides it and asserts the loop halts at the cap. This is the easiest place for a
+                future refactor to introduce an off-by-one bug.
+              </li>
+              <li>
+                The bin-wrappers dry-run smoke test replaces <code class="inline">claude</code> with an exit-0 stub,
+                so the Claude Code call path itself has no coverage here.
+              </li>
+              <li>
+                No test confirms that the guardrails in <code class="inline">03/04/06/07-*.md</code> are enforced by
+                the agent (they are natural-language rules). This is inherent to prompt-based enforcement, but worth
+                acknowledging.
+              </li>
+            </ul>
+          </div>
+
+          <div class="footer-box">
+            <h3>Reviewer questions</h3>
+            <ul>
+              <li>
+                Is <code class="inline">UNKNOWN → fix anyway</code> the right default, or should the orchestrator
+                treat a malformed Step&nbsp;6 report as a hard halt so the underlying parse failure surfaces faster?
+              </li>
+              <li>
+                Should Step&nbsp;7's retry budget (<code class="inline">2</code>) multiply with the loop's iteration
+                cap (<code class="inline">3</code>)? Six effective fix invocations per pipeline run is fine for
+                normal repos but expensive on slow CI.
+              </li>
+              <li>
+                Should the PR exclude the <code class="inline">.sdlc/artifacts/*</code> churn so the line-diff count
+                fits under the repo's 800-line cap, or is the stance that pipeline artifacts are always tracked?
+              </li>
+              <li>
+                Is the <code class="inline">bin/</code> wrapper pattern the preferred long-term install path, or
+                should a <code class="inline">Makefile</code> / <code class="inline">install.sh</code> also be
+                added to automate <code class="inline">PATH</code> wiring?
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <p class="muted" style="margin-top:24px;">
+      Generated by Step 10 (semantic-diff-report) against <code class="inline">main...marek/sdlc-2-decouple-tests</code>.
+    </p>
+  </div>
+</body>
+</html>

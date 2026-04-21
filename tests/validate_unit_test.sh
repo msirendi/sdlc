@@ -59,7 +59,7 @@ test_validate_step_returns_failure_when_log_is_empty() {
   : > "$LOG_FIXTURE"
 
   set +e
-  validate_step "05-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "03-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 1 "$status" "Expected validate_step to fail when the log is empty."
@@ -71,7 +71,7 @@ test_validate_step_returns_failure_when_summary_missing() {
   rm -f "$SUMMARY_FIXTURE"
 
   set +e
-  validate_step "05-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "03-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 1 "$status" "Expected validate_step to fail when the summary file is absent."
@@ -83,7 +83,7 @@ test_validate_step_returns_failure_on_blocked_status() {
   write_blocked_summary
 
   set +e
-  validate_step "05-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "03-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 1 "$status" "Expected validate_step to fail when the summary reports BLOCKED."
@@ -97,7 +97,7 @@ test_validate_step_succeeds_on_ready_status_without_required_outputs() {
   write_ready_summary
 
   set +e
-  validate_step "05-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "03-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 0 "$status" "Expected validate_step to succeed when the summary reports READY."
@@ -109,7 +109,7 @@ test_validate_step_warns_but_succeeds_when_status_line_missing() {
   write_missing_status_summary
 
   set +e
-  validate_step "05-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "03-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 0 "$status" "Expected validate_step to succeed when the status line is absent."
@@ -121,11 +121,11 @@ test_validate_step_fails_when_required_artifact_is_missing() {
   reset_validate_fixture
   printf 'log content\n' > "$LOG_FIXTURE"
   write_ready_summary
-  # Mirror the production config entry for Step 11.
-  STEP_REQUIRED_PATTERNS=("11-ultra-review.md=.sdlc/artifacts/ultra-review.md")
+  # Mirror the production config entry for Step 12.
+  STEP_REQUIRED_PATTERNS=("12-ultra-review.md=.sdlc/artifacts/ultra-review.md")
 
   set +e
-  validate_step "11-ultra-review.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "12-ultra-review.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 1 "$status" "Expected validate_step to fail when the required ultra-review artifact is missing."
@@ -139,10 +139,10 @@ test_validate_step_succeeds_when_required_artifact_is_present() {
   write_ready_summary
   mkdir -p "$REPO_DIR/.sdlc/artifacts"
   printf '# Ultra review findings\n' > "$REPO_DIR/.sdlc/artifacts/ultra-review.md"
-  STEP_REQUIRED_PATTERNS=("11-ultra-review.md=.sdlc/artifacts/ultra-review.md")
+  STEP_REQUIRED_PATTERNS=("12-ultra-review.md=.sdlc/artifacts/ultra-review.md")
 
   set +e
-  validate_step "11-ultra-review.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "12-ultra-review.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 0 "$status" "Expected validate_step to succeed when the required ultra-review artifact exists."
@@ -154,10 +154,10 @@ test_validate_step_matches_required_pattern_with_glob() {
   write_ready_summary
   mkdir -p "$REPO_DIR/.sdlc/reports"
   printf '<html></html>' > "$REPO_DIR/.sdlc/reports/semantic_diff_report_SDLC-TEST.html"
-  STEP_REQUIRED_PATTERNS=("09-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html")
+  STEP_REQUIRED_PATTERNS=("10-semantic-diff-report.md=.sdlc/reports/semantic_diff_report_*.html")
 
   set +e
-  validate_step "09-semantic-diff-report.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "10-semantic-diff-report.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 0 "$status" "Expected validate_step to accept any file matching the required glob pattern."
@@ -171,7 +171,7 @@ test_validate_step_detects_lowercase_blocked_status() {
 EOF
 
   set +e
-  validate_step "05-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
+  validate_step "03-tests.md" "$REPO_DIR" "$LOG_FIXTURE" "$SUMMARY_FIXTURE" >/dev/null
   local status=$?
   set -e
   assert_exit_code 1 "$status" "Expected validate_step to treat lowercase 'blocked' identically to BLOCKED."

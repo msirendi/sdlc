@@ -2,8 +2,10 @@
 
 This repository is a runnable SDLC package driven by the Claude Code CLI, not just a set of markdown prompts. It contains:
 
-- A 16-step feature delivery process expressed as explicit step files.
-- An orchestrator that runs the automated steps in order.
+- A 17-step feature delivery process expressed as explicit step files.
+- An orchestrator that runs the automated steps in order, including a decoupled
+  test-fix loop that separates writing tests, implementing code, running tests,
+  and fixing failures into independent Claude Code invocations.
 - Repo-initialization helpers and artifact templates so later steps can consume durable outputs.
 - Manual closeout checklists for merge and cleanup.
 
@@ -13,28 +15,45 @@ The package is designed to govern the full feature lifecycle in a target reposit
 
 1. Branch setup and isolated worktree creation
 2. Technical specification from task intent
-3. Implementation
-4. Repository instruction compliance review
-5. Test authoring
-6. Full-suite execution
-7. Pull request creation
-8. Review comment handling
-9. Semantic diff analysis
-10. Weak-change cleanup
-11. Ultra-review (`/ultrareview`) bug and design-issue pass
-12. Push and hook enforcement
-13. CI remediation
-14. Rebase and re-validation
-15. Merge checklist
-16. Cleanup checklist
+3. **Test authoring from the spec (before implementation)**
+4. **Implementation against the committed tests (no test execution)**
+5. Repository instruction compliance review
+6. **Full-suite test execution that emits a structured `Result: PASS|FAIL` report**
+7. **Fix implementation to satisfy failing tests (tests are read-only)**
+8. Pull request creation
+9. Review comment handling
+10. Semantic diff analysis
+11. Weak-change cleanup
+12. Ultra-review (`/ultrareview`) bug and design-issue pass
+13. Push and hook enforcement
+14. CI remediation
+15. Rebase and re-validation
+16. Merge checklist
+17. Cleanup checklist
 
-Steps `01` through `14` are automated. Steps `15` and `16` are manual by default and remain explicit operator checklists.
+Steps `01` through `15` are automated. Steps `16` and `17` are manual by default and remain explicit operator checklists.
+
+### Decoupled test workflow
+
+Steps 3, 4, 6, and 7 are intentionally split so each Claude invocation has one
+job:
+
+- Step 3 writes the tests from the spec — no implementation, no test execution.
+- Step 4 implements the code against those tests — no test execution, no test edits.
+- Step 6 runs the suite and writes `.sdlc/artifacts/test-results.md` — no fixes.
+- Step 7 reads the report and fixes production code — no test edits, no test execution.
+
+The orchestrator drives a 6↔7 loop: after Step 6 writes its report, if the
+first `Result:` line is not `PASS`, Step 7 runs once and Step 6 re-runs. The
+loop iterates up to `MAX_TEST_FIX_ITERATIONS` (default `3`) before halting.
+Step 7 is therefore not listed as a top-level planned step when Step 6 is in the
+plan; it appears in run logs with an `(iter N)` suffix.
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `01-branch-setup.md` ... `16-cleanup.md` | The canonical SDLC step instructions |
+| `01-branch-setup.md` ... `17-cleanup.md` | The canonical SDLC step instructions |
 | [`orchestrator/run-pipeline.sh`](orchestrator/run-pipeline.sh) | Main runner for automated steps |
 | [`orchestrator/init-target-repo.sh`](orchestrator/init-target-repo.sh) | Initializes `.sdlc/` inside an existing target repo |
 | [`orchestrator/config.sh`](orchestrator/config.sh) | Default model, effort, timeout, retry, and artifact rules |
@@ -50,10 +69,11 @@ Each governed repository should contain a tracked `.sdlc/` directory with:
 - `.sdlc/task.md`: feature intent and acceptance criteria
 - `.sdlc/overrides.sh`: optional per-repo model, timeout, or permission overrides
 - `.sdlc/artifacts/technical-spec.md`: canonical spec produced by Step 2
-- `.sdlc/artifacts/pr-body.md`: canonical PR description produced by Step 7
-- `.sdlc/artifacts/semantic-review-actions.md`: remediation log produced by Step 10
-- `.sdlc/artifacts/ultra-review.md`: `/ultrareview` findings and triage produced by Step 11
-- `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 9
+- `.sdlc/artifacts/test-results.md`: structured test-run report produced by Step 6 (the orchestrator parses its first `Result:` line to drive the 6↔7 fix loop)
+- `.sdlc/artifacts/pr-body.md`: canonical PR description produced by Step 8
+- `.sdlc/artifacts/semantic-review-actions.md`: remediation log produced by Step 11
+- `.sdlc/artifacts/ultra-review.md`: `/ultrareview` findings and triage produced by Step 12
+- `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 10
 - `.sdlc/logs/`: run logs, summaries, and rolling pipeline context; gitignored
 
 The init script creates the directories and seed files inside an existing repository for you.
@@ -64,6 +84,43 @@ The init script creates the directories and seed files inside an existing reposi
 - Claude Code authenticated locally (`claude auth`)
 - A git repository to govern
 - Any repo-specific access needed by the steps, such as GitHub or Linear
+
+## Installing the `sdlc` commands
+
+The pipeline ships real executable wrappers under [`bin/`](bin). Put that
+directory on your `PATH` once and every `sdlc*` command becomes invocable from
+any shell:
+
+```bash
+# Clone this repo anywhere, e.g. ~/sdlc
+git clone https://github.com/msirendi/sdlc.git ~/sdlc
+
+# Add to ~/.zshrc (or ~/.bashrc) so it persists across sessions
+export SDLC_HOME="$HOME/sdlc"
+export PATH="$SDLC_HOME/bin:$PATH"
+```
+
+Reopen your shell (or `source` the rc file) and verify:
+
+```bash
+command -v sdlc sdlc-init sdlc-dry sdlc-status
+```
+
+Each of those resolves to a script in `$SDLC_HOME/bin`. `SDLC_HOME` is inferred
+from the wrapper's own location, so the `export SDLC_HOME=...` line is optional
+as long as the wrappers live next to the `orchestrator/` directory.
+
+If you prefer not to edit your `PATH`, symlink individual wrappers into a
+directory that is already on `PATH`:
+
+```bash
+ln -s "$HOME/sdlc/bin/sdlc"        /usr/local/bin/sdlc
+ln -s "$HOME/sdlc/bin/sdlc-init"   /usr/local/bin/sdlc-init
+ln -s "$HOME/sdlc/bin/sdlc-dry"    /usr/local/bin/sdlc-dry
+ln -s "$HOME/sdlc/bin/sdlc-status" /usr/local/bin/sdlc-status
+```
+
+The wrappers resolve symlinks, so `SDLC_HOME` still points at the real repo.
 
 ## Default model configuration
 
@@ -103,17 +160,17 @@ Override any of these per-repo in `.sdlc/overrides.sh` (see [`templates/override
 5. Resume or target a single step as needed:
 
    ```bash
-   sdlc --start-from 08-review-comments.md
-   sdlc --only 11-ultra-review.md
+   sdlc --start-from 09-review-comments.md
+   sdlc --only 12-ultra-review.md
    ```
 
 ## Checking run status
 
-Use the status command from anywhere inside a governed repository to inspect the
+Use `sdlc-status` from anywhere inside a governed repository to inspect the
 latest pipeline run without browsing `.sdlc/logs/` manually:
 
 ```bash
-bash "$SDLC_HOME/orchestrator/status.sh"
+sdlc-status
 ```
 
 The summary reports the latest run ID, repository name, per-step outcome,
@@ -122,15 +179,6 @@ elapsed time, and the log directory path. Step states are shown as:
 - `✓ completed`: the step finished successfully
 - `✗ failed`: the pipeline halted at that step
 - `– skipped`: the step was planned for the run but did not complete
-
-If your shell does not already expose a helper, add one like this:
-
-```bash
-sdlc-status() {
-  SDLC_HOME="${SDLC_HOME:-/path/to/sdlc}" \
-    bash "$SDLC_HOME/orchestrator/status.sh"
-}
-```
 
 When no prior runs exist for the current repository, the command prints
 `No pipeline runs found.` and exits successfully.

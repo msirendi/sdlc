@@ -1,4 +1,4 @@
-# Step 7 — Open Pull Request
+# Step 8 — Open Pull Request
 
 **Mode:** Automated
 **Objective:** Publish the branch for formal review with a clear, squash-ready PR that accurately frames the intent, scope, and validation status of the change.

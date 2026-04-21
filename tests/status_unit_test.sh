@@ -8,13 +8,13 @@ source "$TESTS_DIR/testlib.sh"
 source "$STATUS_SCRIPT"
 
 test_array_contains_returns_failure_for_missing_value() {
-  if array_contains "06-run-tests.md" "02-technical-spec.md" "03-implement.md" "05-tests.md"; then
+  if array_contains "06-run-tests.md" "02-technical-spec.md" "03-tests.md" "04-implement.md"; then
     fail "Expected array_contains to return non-zero for a missing value."
   fi
 }
 
 test_array_contains_returns_success_for_present_value() {
-  if ! array_contains "03-implement.md" "02-technical-spec.md" "03-implement.md" "05-tests.md"; then
+  if ! array_contains "04-implement.md" "02-technical-spec.md" "03-tests.md" "04-implement.md"; then
     fail "Expected array_contains to return zero for a present value."
   fi
 }
@@ -72,16 +72,16 @@ test_parse_manifest_extracts_repo_path_and_planned_steps_only() {
 
   write_manifest "$run_dir" "/tmp/example-repo" \
     "02-technical-spec.md" \
-    "03-implement.md" \
-    "04-agents-md-check.md"
+    "03-tests.md" \
+    "04-implement.md"
 
   parse_manifest "$run_dir/pipeline-manifest.md"
 
   actual_steps=$(join_array PLANNED_STEPS)
   expected_steps=$(join_lines \
     "02-technical-spec.md" \
-    "03-implement.md" \
-    "04-agents-md-check.md")
+    "03-tests.md" \
+    "04-implement.md")
 
   assert_equals "/tmp/example-repo" "$MANIFEST_REPO_PATH" "Expected parse_manifest to extract the repository path."
   assert_equals "$expected_steps" "$actual_steps" "Expected parse_manifest to capture only planned steps."
@@ -119,18 +119,18 @@ test_parse_orchestrator_log_collects_completed_failed_and_elapsed_data() {
 [2026-04-13 14:25:31] [ERROR] Step 02-technical-spec.md reported BLOCKED.
 [2026-04-13 14:25:31] [WARN] Validation failed for 02-technical-spec.md.
 [2026-04-13 14:25:31] [INFO] Completed 02-technical-spec.md
-[2026-04-13 14:30:54] [INFO] Completed 03-implement.md
-[2026-04-13 14:24:14] [ERROR] Pipeline halted at 04-agents-md-check.md
+[2026-04-13 14:30:54] [INFO] Completed 03-tests.md
+[2026-04-13 14:24:14] [ERROR] Pipeline halted at 04-implement.md
 [2026-04-13 14:24:14] [INFO] Run complete: 2 succeeded, 1 failed, 287s elapsed.
 EOF
 
   parse_orchestrator_log "$log_file"
   actual_completed=$(join_array COMPLETED_STEPS)
-  expected_completed=$(join_lines "02-technical-spec.md" "03-implement.md")
+  expected_completed=$(join_lines "02-technical-spec.md" "03-tests.md")
 
   assert_equals "fixture-repo" "$REPO_NAME" "Expected parse_orchestrator_log to extract the repository name."
   assert_equals "$expected_completed" "$actual_completed" "Expected parse_orchestrator_log to preserve completed steps in order."
-  assert_equals "04-agents-md-check.md" "$FAILED_STEP" "Expected parse_orchestrator_log to capture the halted step."
+  assert_equals "04-implement.md" "$FAILED_STEP" "Expected parse_orchestrator_log to capture the halted step."
   assert_equals "287" "$ELAPSED_SECONDS" "Expected parse_orchestrator_log to extract elapsed seconds."
 }
 

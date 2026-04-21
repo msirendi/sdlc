@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Convenience wrapper that previews the pipeline without launching Claude Code.
+#
+# Equivalent to: sdlc --dry-run [args...]
+set -euo pipefail
+
+_resolve_script_dir() {
+  local src="${BASH_SOURCE[0]}"
+  while [[ -h "$src" ]]; do
+    local dir
+    dir="$(cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd)"
+    src="$(readlink "$src")"
+    [[ "$src" != /* ]] && src="$dir/$src"
+  done
+  cd -P "$(dirname "$src")" >/dev/null 2>&1 && pwd
+}
+
+_BIN_DIR="$(_resolve_script_dir)"
+exec "$_BIN_DIR/sdlc" "$@" --dry-run

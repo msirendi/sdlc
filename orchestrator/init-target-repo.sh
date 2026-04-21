@@ -55,6 +55,7 @@ Next:
 2. Review .sdlc/overrides.sh and trim any overrides you do not need.
 3. From that repo, preview the pipeline:
    sdlc-dry
-4. If your shell helpers are not loaded yet, use the full-path fallback:
-   SDLC_HOME="$SDLC_HOME" "$SDLC_HOME/orchestrator/run-pipeline.sh" --dry-run
+4. If 'sdlc-dry' is not found, add the sdlc bin directory to PATH:
+   export PATH="$SDLC_HOME/bin:\$PATH"
+   Or invoke the wrapper directly: "$SDLC_HOME/bin/sdlc-dry"
 EOF

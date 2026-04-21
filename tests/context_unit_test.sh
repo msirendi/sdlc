@@ -20,12 +20,12 @@ test_update_context_appends_step_header_and_summary_body() {
   printf '# Summary body\nLine one\n' > "$SUMMARY_FIXTURE"
   printf 'prior context block\n' >> "$CONTEXT_FIXTURE"
 
-  update_context "11-ultra-review.md" "$SUMMARY_FIXTURE" "$CONTEXT_FIXTURE"
+  update_context "12-ultra-review.md" "$SUMMARY_FIXTURE" "$CONTEXT_FIXTURE"
 
   local contents
   contents=$(cat "$CONTEXT_FIXTURE")
   assert_contains "$contents" "prior context block" "Expected existing context to be preserved."
-  assert_contains "$contents" "## Completed: 11-ultra-review.md" \
+  assert_contains "$contents" "## Completed: 12-ultra-review.md" \
     "Expected the completed step header to be appended."
   assert_contains "$contents" "# Summary body" "Expected the summary body to be appended verbatim."
   assert_contains "$contents" "Line one" "Expected every line of the summary to be appended."
@@ -53,7 +53,7 @@ test_update_context_truncates_when_context_exceeds_24kb() {
   printf '%s\n' "$filler" > "$CONTEXT_FIXTURE"
   printf 'fresh summary line\n' > "$SUMMARY_FIXTURE"
 
-  update_context "03-implement.md" "$SUMMARY_FIXTURE" "$CONTEXT_FIXTURE"
+  update_context "04-implement.md" "$SUMMARY_FIXTURE" "$CONTEXT_FIXTURE"
 
   local size
   size=$(wc -c < "$CONTEXT_FIXTURE" | tr -d ' ')
@@ -64,7 +64,7 @@ test_update_context_truncates_when_context_exceeds_24kb() {
   # The freshest content (the appended summary) must survive the tail-cut.
   assert_contains "$(cat "$CONTEXT_FIXTURE")" "fresh summary line" \
     "Expected truncation to keep the most recent summary content."
-  assert_contains "$(cat "$CONTEXT_FIXTURE")" "## Completed: 03-implement.md" \
+  assert_contains "$(cat "$CONTEXT_FIXTURE")" "## Completed: 04-implement.md" \
     "Expected truncation to keep the most recent step header."
 }
 
@@ -73,7 +73,7 @@ test_update_context_does_not_truncate_when_context_is_small() {
   printf 'a small seed\n' > "$CONTEXT_FIXTURE"
   printf 'a small summary\n' > "$SUMMARY_FIXTURE"
 
-  update_context "04-agents-md-check.md" "$SUMMARY_FIXTURE" "$CONTEXT_FIXTURE"
+  update_context "05-agents-md-check.md" "$SUMMARY_FIXTURE" "$CONTEXT_FIXTURE"
 
   local contents
   contents=$(cat "$CONTEXT_FIXTURE")

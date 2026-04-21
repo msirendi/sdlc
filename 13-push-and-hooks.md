@@ -1,4 +1,4 @@
-# Step 12 — Push Changes and Fix Pre-Commit Hook Issues
+# Step 13 — Push Changes and Fix Pre-Commit Hook Issues
 
 **Mode:** Automated
 **Objective:** Publish the latest branch state to the remote and resolve any repository-enforced pre-commit or pre-push issues encountered during the process.
@@ -38,7 +38,7 @@
      - **Secret detection** (detect-secrets, gitleaks): Remove the secret from the code. Rotate the credential if it was ever committed. Add the file to `.gitignore` or use environment variables.
      - **File size or binary checks:** Remove the offending file from the commit.
      - **PR size or scope policy checks:** Split the work into smaller, single-issue or stacked PRs. Do not override the limit in this branch unless a maintainer has approved an exception.
-     - **Test guards** (if hooks run tests): Fix the failing test per Step 6.
+     - **Test guards** (if hooks run tests): Re-run Step 6 to capture the failure in `.sdlc/artifacts/test-results.md`, then run Step 7 to fix the underlying code.
 
 5. **After each fix:**
    - Re-stage the corrected files.
