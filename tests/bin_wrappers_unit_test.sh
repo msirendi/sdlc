@@ -120,6 +120,8 @@ test_sdlc_help_prints_user_facing_overview() {
     "Expected the USAGE section in sdlc --help output."
   assert_contains "$output" "TYPICAL FLOW" \
     "Expected the TYPICAL FLOW section so agents see the sdlc-init / task.md / sdlc sequence."
+  assert_contains "$output" "PIPELINE STEPS" \
+    "Expected the PIPELINE STEPS section so operators can see the step map up front."
   assert_contains "$output" "Press Ctrl+C" \
     "Expected the DURING A RUN section to document that Ctrl+C halts cleanly."
   assert_contains "$output" "sdlc-status" \

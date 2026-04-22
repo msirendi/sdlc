@@ -44,6 +44,11 @@ terminate_current_step() {
   [[ -z "$pid" ]] && return 0
   if kill -0 "$pid" 2>/dev/null; then
     signal_process_tree TERM "$pid"
+    # Give the subshell up to 2 seconds (20 * 100ms) to drain its tee pipes
+    # before escalating to KILL — long enough for the trailing bytes of
+    # Claude's response to flush into the summary file so the operator does
+    # not lose the partial output on Ctrl+C, short enough that a wedged
+    # child does not stall the exit perceptibly.
     local waited=0
     while [[ "$waited" -lt 20 ]] && kill -0 "$pid" 2>/dev/null; do
       sleep 0.1
@@ -381,7 +386,11 @@ execute_step_with_retries() {
 
 # Print a short, terminal-friendly excerpt of the step's final response so the
 # operator sees what the step accomplished without hunting through logs. Looks
-# for the canonical Status line and 1–2 preceding context lines.
+# for the canonical Status line emitted by the "Final Response Format" in
+# execute.sh: step files produce `5. Status: READY|BLOCKED` as the fifth and
+# final numbered field. validate.sh parses the same two forms (`^5.\s*Status:`
+# and bare `^Status:`), so this regex stays in sync with that contract — if the
+# final-response template is ever renumbered, both places must be updated.
 emit_step_summary_excerpt() {
   local label="$1"
   local summary_path="$2"
