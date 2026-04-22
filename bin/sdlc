@@ -81,15 +81,22 @@ COMPANION COMMANDS
   sdlc-init      Scaffold .sdlc/ in an existing repo (run once per repo)
   sdlc-dry       Alias for `sdlc --dry-run`
   sdlc-status    Summarize the latest pipeline run for the current repo
-
-SEE ALSO
-  $SDLC_HOME/README.md
 EOF
+  # SEE ALSO interpolates $SDLC_HOME so the operator gets a real, clickable
+  # filesystem path — the heredoc above is quoted to keep $PWD and similar
+  # placeholders literal in the USAGE section, which is why this line lives
+  # outside the heredoc.
+  printf '\nSEE ALSO\n  %s/README.md\n' "$SDLC_HOME"
 }
 
 print_version() {
   local sha="unknown"
-  if command -v git >/dev/null 2>&1 && [[ -d "$SDLC_HOME/.git" ]]; then
+  # Don't gate on `[[ -d "$SDLC_HOME/.git" ]]` — inside a git worktree that
+  # path is a regular file ("gitdir: …"), not a directory, and the operator
+  # would see revision=unknown despite being in a valid checkout. `git -C
+  # rev-parse` handles both layouts (and the non-repo case) via its own
+  # fallback.
+  if command -v git >/dev/null 2>&1; then
     sha=$(git -C "$SDLC_HOME" rev-parse --short HEAD 2>/dev/null || printf 'unknown')
   fi
   printf 'sdlc (SDLC_HOME=%s, revision=%s)\n' "$SDLC_HOME" "$sha"

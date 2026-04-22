@@ -94,14 +94,23 @@ EOF
   # CURRENT_STEP_PID is intentionally not `local` — the orchestrator's
   # interrupt handler reads it from the parent scope to terminate the step.
   (
+    # Reset the parent's INT/TERM trap so the subshell does not also run
+    # handle_interrupt when the orchestrator signals it — the parent's
+    # terminate_current_step already walks the tree, and a second handler
+    # would only duplicate log lines and try to re-TERM the heartbeat.
+    trap - INT TERM
     cd "$repo_root"
     : > "$log_file"
     : > "$summary_file"
-    # Route the subshell's own stderr (e.g. bash's "Terminated: 15" job-end
-    # notice when we SIGKILL it during interrupt handling) into the step log
-    # so it doesn't clutter the terminal. Claude's stderr is still captured
-    # explicitly below via the pipeline's `2> >(tee …)` redirection.
-    exec 2>>"$log_file"
+    # Preserve the original stderr on FD 3 before routing the subshell's own
+    # stderr (e.g. bash's "Terminated: 15" job-end notice when we SIGKILL it
+    # during interrupt handling) into the step log so it doesn't clutter the
+    # terminal. The `>&3` in the process substitution below keeps claude's
+    # stderr flowing to the operator's terminal at its original destination;
+    # without saving it first, `>&2` would point at the log file (thanks to
+    # the exec) and claude's stderr would be silently duplicated into the
+    # log file and missing from the operator's terminal.
+    exec 3>&2 2>>"$log_file"
     # --output-format is pinned to 'text' because $summary_file is written
     # verbatim from claude's stdout below and downstream steps 9 and 10 read
     # it as prose. Any other format (stream-json, json) would silently break
@@ -115,7 +124,7 @@ EOF
         --permission-mode "$permission_mode" \
         --output-format text \
         ${claude_args[@]+"${claude_args[@]}"} \
-        2> >(tee -a "$log_file" >&2) \
+        2> >(tee -a "$log_file" >&3) \
       | tee "$summary_file" \
       | tee -a "$log_file"
     # Pipeline is: printf | sdlc_run_with_timeout claude | tee summary | tee log.

@@ -68,8 +68,12 @@ handle_interrupt() {
   sdlc_log "WARN" "Interrupt received. Terminating current step and exiting..."
   stop_heartbeat
   terminate_current_step
-  sdlc_log "WARN" "Pipeline halted by user (SIGINT)."
-  # 130 = 128 + SIGINT(2), the conventional shell exit code for Ctrl+C.
+  # The trap catches INT and TERM — log a signal-agnostic phrase so a SIGTERM
+  # reader doesn't interpret "(SIGINT)" as the actual signal that fired.
+  sdlc_log "WARN" "Pipeline halted by user (signal)."
+  # 130 = 128 + SIGINT(2), the conventional shell exit code for Ctrl+C; we
+  # use the same code on SIGTERM so operators have one reliable post-mortem
+  # signal to grep for.
   exit 130
 }
 
