@@ -83,12 +83,25 @@ EOF
 
   sdlc_log "INFO" "Model: $CLAUDE_MODEL | Effort: $CLAUDE_EFFORT | Permission mode: $permission_mode"
   sdlc_log "INFO" "Timeout: ${timeout_seconds}s | Step log: $log_file"
+  sdlc_log "INFO" "Follow progress: tail -f $log_file"
 
   set +e
+  # Background the subshell so the orchestrator's INT/TERM trap can kill it
+  # cleanly. A synchronous subshell inside a pipeline blocks bash's signal
+  # delivery until the inner command exits, which is why plain Ctrl+C
+  # previously did nothing useful on a long-running Claude step.
+  #
+  # CURRENT_STEP_PID is intentionally not `local` — the orchestrator's
+  # interrupt handler reads it from the parent scope to terminate the step.
   (
     cd "$repo_root"
     : > "$log_file"
     : > "$summary_file"
+    # Route the subshell's own stderr (e.g. bash's "Terminated: 15" job-end
+    # notice when we SIGKILL it during interrupt handling) into the step log
+    # so it doesn't clutter the terminal. Claude's stderr is still captured
+    # explicitly below via the pipeline's `2> >(tee …)` redirection.
+    exec 2>>"$log_file"
     # --output-format is pinned to 'text' because $summary_file is written
     # verbatim from claude's stdout below and downstream steps 9 and 10 read
     # it as prose. Any other format (stream-json, json) would silently break
@@ -109,8 +122,11 @@ EOF
     # The claude (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0]
     # is always printf's success and would mask real failures from the retry loop.
     exit "${PIPESTATUS[1]}"
-  )
+  ) &
+  CURRENT_STEP_PID=$!
+  wait "$CURRENT_STEP_PID"
   local exit_code=$?
+  CURRENT_STEP_PID=""
   set -e
 
   return "$exit_code"

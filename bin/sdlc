@@ -6,6 +6,7 @@
 #   sdlc /path/to/repo       # run against a specific repo
 #   sdlc --dry-run           # forward flags straight through
 #   sdlc /path/to/repo --only 12-ultra-review.md
+#   sdlc --help              # show user-facing help
 set -euo pipefail
 
 # Resolve the directory that actually contains this script, following symlinks
@@ -24,6 +25,90 @@ _resolve_script_dir() {
 _BIN_DIR="$(_resolve_script_dir)"
 : "${SDLC_HOME:="$(cd "$_BIN_DIR/.." >/dev/null 2>&1 && pwd)"}"
 export SDLC_HOME
+
+print_help() {
+  cat <<'EOF'
+sdlc — drive a Claude-Code-governed SDLC pipeline from branch to merge-ready PR.
+
+USAGE
+  sdlc [REPO]                     Run the full pipeline (default: $PWD)
+  sdlc [REPO] --dry-run           Preview the plan, launch nothing
+  sdlc [REPO] --start-from STEP   Resume from a specific step file
+  sdlc [REPO] --only STEP         Execute exactly one step file
+  sdlc [REPO] --include-manual    Also run manual checklist steps (16, 17)
+  sdlc --help                     This help
+  sdlc --version                  Print version info
+
+TYPICAL FLOW
+  1. sdlc-init                    One-time scaffold of .sdlc/ in the target repo
+  2. edit .sdlc/task.md           Describe the feature (intent, requirements, acceptance)
+  3. sdlc-dry                     Preview the plan
+  4. sdlc                         Drive branch → spec → tests → code → PR → review
+  5. sdlc-status                  Inspect the most recent run
+
+PIPELINE STEPS
+  01 branch-setup           02 technical-spec        03 tests
+  04 implement              05 agents-md-check       06 run-tests
+  07 fix-test-failures*     08 open-pr               09 review-comments
+  10 semantic-diff-report   11 address-findings      12 ultra-review
+  13 push-and-hooks         14 fix-ci                15 rebase
+  16 merge (manual)         17 cleanup (manual)
+
+  * Step 07 is driven internally by the Step 06↔07 test-fix loop when Step 06
+    is planned. It appears as a top-level step only when targeted explicitly.
+
+DURING A RUN
+  Each step streams stdout to the terminal and mirrors it to a per-step log.
+  Follow progress in another terminal with:   tail -f <step log path>
+  The orchestrator prints the log path when it starts a step.
+  Press Ctrl+C to stop: the current step is terminated and the pipeline exits.
+
+ARTIFACTS & LOGS  (all under the target repo)
+  .sdlc/task.md                         Feature intent — you author this
+  .sdlc/artifacts/technical-spec.md     Step 02 output
+  .sdlc/artifacts/test-results.md       Step 06 output (drives the 06↔07 loop)
+  .sdlc/artifacts/pr-body.md            Step 08 output
+  .sdlc/artifacts/semantic-review-actions.md  Step 11 output
+  .sdlc/artifacts/ultra-review.md       Step 12 output
+  .sdlc/reports/semantic_diff_report_*.html   Step 10 output
+  .sdlc/logs/<run-id>/                  Orchestrator + per-step logs (gitignored)
+
+ENVIRONMENT OVERRIDES
+  Per-repo settings go in .sdlc/overrides.sh (model, timeouts, retries,
+  permission modes, NOTIFICATION_WEBHOOK, etc.). See templates/overrides-template.sh.
+
+COMPANION COMMANDS
+  sdlc-init      Scaffold .sdlc/ in an existing repo (run once per repo)
+  sdlc-dry       Alias for `sdlc --dry-run`
+  sdlc-status    Summarize the latest pipeline run for the current repo
+
+SEE ALSO
+  $SDLC_HOME/README.md
+EOF
+}
+
+print_version() {
+  local sha="unknown"
+  if command -v git >/dev/null 2>&1 && [[ -d "$SDLC_HOME/.git" ]]; then
+    sha=$(git -C "$SDLC_HOME" rev-parse --short HEAD 2>/dev/null || printf 'unknown')
+  fi
+  printf 'sdlc (SDLC_HOME=%s, revision=%s)\n' "$SDLC_HOME" "$sha"
+}
+
+# Intercept help/version before argument parsing so `sdlc --help` shows the
+# user-facing overview instead of the orchestrator's internal option list.
+for arg in "$@"; do
+  case "$arg" in
+    -h|--help)
+      print_help
+      exit 0
+      ;;
+    --version)
+      print_version
+      exit 0
+      ;;
+  esac
+done
 
 repo_path="$PWD"
 if [[ $# -gt 0 && "$1" != -* ]]; then

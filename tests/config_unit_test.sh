@@ -115,4 +115,20 @@ test_config_step_timeouts_omit_manual_steps() {
     "Expected manual Step 17 to have no explicit timeout entry."
 }
 
+test_config_heartbeat_interval_has_sensible_default() {
+  load_config
+  # Heartbeat cadence is user-facing (it controls how often "still running"
+  # messages print during long Claude calls). Pin the default so overrides.sh
+  # authors can reason about it, and confirm it stays enabled by default.
+  assert_equals "120" "$HEARTBEAT_INTERVAL" \
+    "Expected HEARTBEAT_INTERVAL to default to 120s so long steps aren't silent."
+}
+
+test_config_heartbeat_interval_honors_environment_override() {
+  local HEARTBEAT_INTERVAL=30
+  load_config
+  assert_equals "30" "$HEARTBEAT_INTERVAL" \
+    "Expected preset HEARTBEAT_INTERVAL in the environment to override the default."
+}
+
 run_test_suite

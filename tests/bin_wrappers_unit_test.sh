@@ -107,6 +107,62 @@ EOF
     "sdlc-dry should also trigger the dry-run code path."
 }
 
+test_sdlc_help_prints_user_facing_overview() {
+  # `sdlc --help` is the primary discoverability hook for a new operator, so
+  # pin the sections that should always be visible without invoking the
+  # orchestrator. This also guards against accidental regressions where a
+  # future refactor drops the help interception back into run-pipeline.sh.
+  local output
+  local status=0
+  output=$("$BIN_DIR/sdlc" --help 2>&1) || status=$?
+  assert_exit_code 0 "$status" "sdlc --help should exit 0. Output: $output"
+  assert_contains "$output" "USAGE" \
+    "Expected the USAGE section in sdlc --help output."
+  assert_contains "$output" "TYPICAL FLOW" \
+    "Expected the TYPICAL FLOW section so agents see the sdlc-init / task.md / sdlc sequence."
+  assert_contains "$output" "Press Ctrl+C" \
+    "Expected the DURING A RUN section to document that Ctrl+C halts cleanly."
+  assert_contains "$output" "sdlc-status" \
+    "Expected help to cross-reference sdlc-status for inspecting runs."
+
+  local short_output
+  local short_status=0
+  short_output=$("$BIN_DIR/sdlc" -h 2>&1) || short_status=$?
+  assert_exit_code 0 "$short_status" "sdlc -h should exit 0. Output: $short_output"
+  assert_contains "$short_output" "USAGE" \
+    "Expected -h to be accepted as a short alias for --help."
+}
+
+test_sdlc_help_short_circuits_orchestrator_without_git_repo() {
+  # A raw `sdlc` invocation outside a git repo errors out. `sdlc --help` must
+  # not inherit that failure mode — the help screen must be available even
+  # when the caller has not yet bootstrapped a target repo.
+  use_temp_dir
+  local fake_home="$TEST_TEMP_DIR/home"
+  mkdir -p "$fake_home"
+
+  local output
+  local status=0
+  output=$(cd "$TEST_TEMP_DIR" && env -i \
+    HOME="$fake_home" \
+    PATH="$BIN_DIR:/usr/bin:/bin" \
+    sdlc --help 2>&1) || status=$?
+
+  assert_exit_code 0 "$status" \
+    "sdlc --help should succeed even when invoked outside a git repo. Output: $output"
+  assert_contains "$output" "USAGE" \
+    "Expected the USAGE section when --help is requested outside a git repo."
+}
+
+test_sdlc_version_prints_home_and_revision() {
+  local output
+  local status=0
+  output=$("$BIN_DIR/sdlc" --version 2>&1) || status=$?
+  assert_exit_code 0 "$status" "sdlc --version should exit 0. Output: $output"
+  assert_contains "$output" "sdlc (SDLC_HOME=" \
+    "Expected --version to surface SDLC_HOME so operators can confirm which install is on PATH."
+}
+
 test_sdlc_status_reports_no_runs_when_fresh() {
   # sdlc-status must be invocable directly (prior implementation was missing),
   # and it must succeed with the documented message on a repo that has never
