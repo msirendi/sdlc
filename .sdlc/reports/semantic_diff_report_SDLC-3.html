@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Semantic Diff Report: SDLC-3</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --panel: #161b22;
+      --panel-alt: #0f1720;
+      --border: #30363d;
+      --text: #c9d1d9;
+      --muted: #8b949e;
+      --heading: #f0f6fc;
+      --accent: #58a6ff;
+      --success: #3fb950;
+      --warn: #d29922;
+      --danger: #f85149;
+      --unclear: #db6d28;
+      --code-bg: #010409;
+      --code-border: #21262d;
+      --inline: #79c0ff;
+      --kw: #ff7b72;
+      --fn: #d2a8ff;
+      --var: #ffa657;
+      --str: #a5d6ff;
+      --num: #79c0ff;
+      --com: #8b949e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #0d1117 0%, #0b1220 100%);
+      color: var(--text);
+      font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    }
+
+    a { color: var(--accent); }
+
+    .wrap {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    .hero {
+      padding: 24px 28px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(88,166,255,0.12), rgba(13,17,23,0.9));
+      box-shadow: 0 20px 60px rgba(1, 4, 9, 0.35);
+    }
+
+    .eyebrow {
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    h1, h2, h3, h4 {
+      margin: 0;
+      color: var(--heading);
+      line-height: 1.25;
+    }
+
+    h1 { margin-top: 10px; font-size: 32px; }
+    h2 { font-size: 22px; }
+
+    h3 {
+      margin-top: 18px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+    }
+
+    p { margin: 0 0 10px; }
+
+    .summary {
+      margin-top: 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(22, 27, 34, 0.72);
+      color: var(--heading);
+      font-size: 13px;
+    }
+
+    .lead {
+      max-width: 980px;
+      margin-top: 14px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 22px;
+      margin-top: 26px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(22, 27, 34, 0.95);
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(1, 4, 9, 0.24);
+    }
+
+    .card-head {
+      padding: 22px 24px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(88,166,255,0.06), rgba(22,27,34,0));
+    }
+
+    .paths {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .path {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(13, 17, 23, 0.7);
+      color: var(--inline);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(360px, 1fr);
+      gap: 0;
+    }
+
+    .pane { padding: 22px 24px 24px; }
+
+    .pane + .pane {
+      border-left: 1px solid var(--border);
+      background: var(--panel-alt);
+    }
+
+    ul { margin: 0; padding-left: 18px; }
+    li { margin: 0 0 10px; }
+
+    .audit-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      gap: 10px;
+    }
+
+    .audit-item {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(13, 17, 23, 0.56);
+    }
+
+    .audit-item.strong    { border-left: 4px solid var(--success); }
+    .audit-item.probable  { border-left: 4px solid var(--warn); }
+    .audit-item.weak      { border-left: 4px solid var(--danger);  background: rgba(248, 81, 73, 0.08); }
+    .audit-item.unclear   { border-left: 4px solid var(--unclear); background: rgba(219, 109, 40, 0.08); }
+
+    .badge {
+      display: inline-block;
+      margin-bottom: 6px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .badge.strong   { background: rgba(63, 185, 80, 0.18);  color: #7ee787; }
+    .badge.probable { background: rgba(210, 153, 34, 0.18); color: #e3b341; }
+    .badge.weak     { background: rgba(248, 81, 73, 0.18);  color: #ff938a; }
+    .badge.unclear  { background: rgba(219, 109, 40, 0.18); color: #ffb77c; }
+
+    .code-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .snippet {
+      margin: 0 0 16px;
+      border: 1px solid var(--code-border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--code-bg);
+    }
+
+    .snippet-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--code-border);
+      background: #0d1117;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      color: var(--text);
+      font: 12.5px/1.55 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre;
+    }
+
+    .kw  { color: var(--kw); }
+    .fn  { color: var(--fn); }
+    .var { color: var(--var); }
+    .str { color: var(--str); }
+    .num { color: var(--num); }
+    .com { color: var(--com); font-style: italic; }
+    .op  { color: #c9d1d9; }
+
+    code.inline {
+      padding: 0.15em 0.35em;
+      border-radius: 6px;
+      background: rgba(110, 118, 129, 0.18);
+      color: var(--inline);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95em;
+    }
+
+    .footer-card { padding: 24px; }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .footer-box {
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(13, 17, 23, 0.56);
+    }
+
+    .footer-box h3 { margin-top: 0; }
+
+    .muted { color: var(--muted); }
+
+    @media (max-width: 1040px) {
+      .grid { grid-template-columns: 1fr; }
+      .pane + .pane { border-left: 0; border-top: 1px solid var(--border); }
+    }
+
+    @media (max-width: 720px) {
+      .wrap { padding: 18px 14px 30px; }
+      h1 { font-size: 26px; }
+      .footer-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <div class="eyebrow">Semantic Diff Report</div>
+      <h1>SDLC-3: CLI UX — help flag, in-run feedback, Ctrl+C handling</h1>
+      <p class="lead">
+        This branch fixes three operator-facing ergonomics gaps in the <code class="inline">sdlc</code> CLI. A new
+        <code class="inline">--help</code>/<code class="inline">--version</code> surface makes the tool self-documenting
+        without booting the orchestrator; a heartbeat loop plus a <code class="inline">tail -f</code> hint keep the
+        terminal alive during long Claude steps; and a SIGINT trap that walks the Claude subshell's process tree
+        finally makes Ctrl+C actually stop the pipeline. The most load-bearing change is the subtle one in
+        <code class="inline">execute.sh</code>: backgrounding the Claude subshell with <code class="inline">&amp;</code>
+        so that bash can deliver signals to the orchestrator while <code class="inline">wait</code> blocks — without
+        that, all the trap machinery would never fire.
+      </p>
+      <div class="summary">
+        <div class="pill">Compare: <code class="inline">main...marek/sdlc-3-cli-ux</code></div>
+        <div class="pill">Diff size: 8 files, +378 / −56</div>
+        <div class="pill">Commits on branch: 2 (<code class="inline">5da5f10</code>, <code class="inline">d14a472</code>)</div>
+        <div class="pill">Runtime code: <code class="inline">bin/sdlc</code>, <code class="inline">orchestrator/*</code></div>
+        <div class="pill">New config knob: <code class="inline">HEARTBEAT_INTERVAL</code></div>
+        <div class="pill">New tests: 5</div>
+      </div>
+    </section>
+
+    <div class="stack">
+
+      <!-- ============================================================= -->
+      <!-- Block 1: Help & version surface -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 1: First-class <code class="inline">--help</code> / <code class="inline">--version</code> surface in <code class="inline">sdlc</code></h2>
+          <div class="paths">
+            <span class="path">bin/sdlc</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Give a new operator a way to discover what <code class="inline">sdlc</code> does — typical flow, step
+              map, artifact layout, and Ctrl+C behavior — without needing to read source files and without
+              triggering the orchestrator. Also expose the install location and revision so operators can confirm
+              which checkout is on <code class="inline">PATH</code>.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              The previous binary had no <code class="inline">--help</code> — invoking <code class="inline">sdlc</code>
+              with any argument fell straight into the orchestrator's internal option parser, which spoke to the
+              machine and not to humans. The task explicitly names this as one of three operator-facing gaps:
+              "there is no first-class help screen." Help must also work outside a git repo, because a brand-new
+              operator hasn't yet bootstrapped a target — so the intercept has to happen before the orchestrator
+              does any repo-rooted work.
+            </p>
+
+            <h3>Justification audit</h3>
+            <ul class="audit-list">
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">print_help()</code> with <code class="inline">USAGE</code>, <code class="inline">TYPICAL FLOW</code>, <code class="inline">PIPELINE STEPS</code>, <code class="inline">DURING A RUN</code>, and a cross-reference to <code class="inline">sdlc-status</code>. The acceptance criteria enumerate each of these sections, and the unit tests assert on their presence.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">print_version()</code> printing <code class="inline">sdlc (SDLC_HOME=…, revision=…)</code>. Explicit AC; the revision lookup is guarded so it degrades to <code class="inline">unknown</code> on non-git installs rather than erroring.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div>Argument intercept loop <em>before</em> <code class="inline">repo_path</code> parsing. This is the non-obvious piece: it guarantees <code class="inline">--help</code> works outside a git repo (covered by <code class="inline">test_sdlc_help_short_circuits_orchestrator_without_git_repo</code>) and that any position of <code class="inline">--help</code> in argv works.</div>
+              </li>
+              <li class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <div>The one-line header comment addition (<code class="inline">sdlc --help # show user-facing help</code>). Mechanical doc churn — keeps the usage banner in sync with the new flag but not required by any AC.</div>
+              </li>
+            </ul>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>Two new exit-0 code paths for <code class="inline">sdlc --help</code>, <code class="inline">sdlc -h</code>, and <code class="inline">sdlc --version</code>.</li>
+              <li>These short-circuit <em>before</em> <code class="inline">repo_path</code> validation, so they no longer require a git repo under <code class="inline">$PWD</code>.</li>
+              <li>No change to existing flag parsing (<code class="inline">--dry-run</code>, <code class="inline">--start-from</code>, <code class="inline">--only</code>, <code class="inline">--include-manual</code>).</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>The intercept matches any arg named <code class="inline">-h</code>/<code class="inline">--help</code>/<code class="inline">--version</code> <em>anywhere</em> in argv. Confirm this doesn't collide with a future flag that takes those strings as a value (currently none do — all flags that take values use <code class="inline">=</code>-style parsing in <code class="inline">run-pipeline.sh</code>).</li>
+              <li><code class="inline">$SDLC_HOME</code> in the help text appears inside a <code class="inline">&lt;&lt;'EOF'</code> heredoc — it is printed <em>literally</em>, not expanded. Confirmed intentional: the user sees the variable name in the <code class="inline">SEE ALSO</code> line as a pointer. <code class="inline">print_version()</code>, by contrast, uses <code class="inline">printf</code> with interpolation.</li>
+              <li>Revision lookup guards on <code class="inline">[[ -d "$SDLC_HOME/.git" ]]</code> — this gracefully handles <code class="inline">git worktree</code> checkouts where <code class="inline">.git</code> is a file, falling back to <code class="inline">unknown</code>. Confirm this is acceptable for worktree installs (operator would see <code class="inline">revision=unknown</code>).</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title"><span>NEW CODE</span><span>bin/sdlc</span></div>
+            <div class="snippet">
+              <div class="snippet-head">print_help &amp; print_version</div>
+<pre><span class="fn">print_help</span>() {
+  <span class="kw">cat</span> &lt;&lt;<span class="str">'EOF'</span>
+sdlc — drive a Claude-Code-governed SDLC pipeline from branch to merge-ready PR.
+
+USAGE
+  sdlc [REPO]                     Run the full pipeline (default: $PWD)
+  sdlc [REPO] --dry-run           Preview the plan, launch nothing
+  sdlc [REPO] --start-from STEP   Resume from a specific step file
+  sdlc [REPO] --only STEP         Execute exactly one step file
+  sdlc [REPO] --include-manual    Also run manual checklist steps (16, 17)
+  sdlc --help                     This help
+  sdlc --version                  Print version info
+
+TYPICAL FLOW
+  1. sdlc-init      One-time scaffold of .sdlc/
+  2. edit .sdlc/task.md
+  3. sdlc-dry       Preview the plan
+  4. sdlc           Drive branch → spec → tests → code → PR → review
+  5. sdlc-status    Inspect the most recent run
+
+PIPELINE STEPS
+  01 branch-setup           02 technical-spec        03 tests
+  04 implement              05 agents-md-check       06 run-tests
+  07 fix-test-failures*     08 open-pr               09 review-comments
+  10 semantic-diff-report   11 address-findings      12 ultra-review
+  13 push-and-hooks         14 fix-ci                15 rebase
+  16 merge (manual)         17 cleanup (manual)
+
+DURING A RUN
+  Each step streams stdout and mirrors it to a per-step log.
+  Follow progress in another terminal with:   tail -f &lt;log&gt;
+  Press Ctrl+C to stop: the current step is terminated.
+EOF
+}
+
+<span class="fn">print_version</span>() {
+  <span class="kw">local</span> sha=<span class="str">"unknown"</span>
+  <span class="kw">if</span> <span class="kw">command</span> -v git &gt;/dev/null 2&gt;&amp;1 &amp;&amp; [[ -d <span class="str">"$SDLC_HOME/.git"</span> ]]; <span class="kw">then</span>
+    sha=$(git -C <span class="str">"$SDLC_HOME"</span> rev-parse --short HEAD 2&gt;/dev/null || <span class="kw">printf</span> <span class="str">'unknown'</span>)
+  <span class="kw">fi</span>
+  <span class="kw">printf</span> <span class="str">'sdlc (SDLC_HOME=%s, revision=%s)\n'</span> <span class="str">"$SDLC_HOME"</span> <span class="str">"$sha"</span>
+}
+</pre>
+            </div>
+
+            <div class="snippet">
+              <div class="snippet-head">Early-intercept loop (before repo_path parsing)</div>
+<pre><span class="com"># Intercept help/version before argument parsing so `sdlc --help` shows the</span>
+<span class="com"># user-facing overview instead of the orchestrator's internal option list.</span>
+<span class="kw">for</span> arg <span class="kw">in</span> <span class="str">"$@"</span>; <span class="kw">do</span>
+  <span class="kw">case</span> <span class="str">"$arg"</span> <span class="kw">in</span>
+    -h|--help)
+      print_help
+      <span class="kw">exit</span> <span class="num">0</span>
+      ;;
+    --version)
+      print_version
+      <span class="kw">exit</span> <span class="num">0</span>
+      ;;
+  <span class="kw">esac</span>
+<span class="kw">done</span>
+</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 2: Signal-interruptible step execution -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 2: Signal-interruptible step execution (Ctrl+C actually works)</h2>
+          <div class="paths">
+            <span class="path">orchestrator/lib/execute.sh</span>
+            <span class="path">orchestrator/run-pipeline.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              When the operator presses Ctrl+C during a long Claude step, the orchestrator must terminate the
+              step <em>and every descendant process it spawned</em> (the <code class="inline">tee</code> helpers,
+              the <code class="inline">timeout</code> wrapper, the Claude CLI, and any children Claude may have
+              spawned), then exit with the conventional SIGINT code 130 — leaving no orphan
+              <code class="inline">claude</code> or <code class="inline">sleep</code> processes behind.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              Before this change, Ctrl+C was practically useless: the orchestrator ran the Claude step in a
+              <em>synchronous</em> subshell <code class="inline">(…)</code> inside a pipeline. In bash, signal
+              delivery to the parent is deferred until the foreground command returns, so the trap (even if one
+              had been installed) would not fire until Claude finished on its own. The fix has three linked
+              pieces: <strong>(a)</strong> background the subshell with <code class="inline">&amp;</code> and
+              <code class="inline">wait</code> (wait is signal-interruptible); <strong>(b)</strong> write a trap
+              that walks the process tree because the subshell's descendants inherit the orchestrator's pgid and
+              <code class="inline">kill -PGID</code> would also kill the orchestrator itself; <strong>(c)</strong>
+              quiet bash's own "Terminated: 15" job-control notice so it doesn't clutter the terminal.
+            </p>
+
+            <h3>Justification audit</h3>
+            <ul class="audit-list">
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div>Backgrounding the Claude subshell (<code class="inline">) &amp;</code>) + <code class="inline">wait "$CURRENT_STEP_PID"</code>. This is the linchpin — without it, no trap fires during a step.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">CURRENT_STEP_PID</code> as an <em>unscoped</em> global (intentionally not <code class="inline">local</code>, and documented as such in the comment). The interrupt handler reads it from the parent scope.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">signal_process_tree()</code> using <code class="inline">pgrep -P</code> recursively. The task explicitly requires macOS-compatible process-tree traversal and rules out GNU coreutils.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">terminate_current_step()</code> with TERM → poll(2s, 100ms slices) → KILL escalation. This is graceful-first, forceful-only-if-needed, which is the right etiquette for a long-running Claude process that may be mid-write.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">handle_interrupt()</code> printing the warning, stopping heartbeat, terminating the step, exiting 130. Every sub-action is a named AC requirement.</div>
+              </li>
+              <li class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <div><code class="inline">exec 2&gt;&gt;"$log_file"</code> inside the backgrounded subshell. Suppresses bash's post-kill "Terminated: 15" chatter — a real ergonomics gain, but with a small cost: <em>any</em> unexpected subshell-level stderr (not Claude's — Claude has its own <code class="inline">2&gt; &gt;(tee…)</code> redirect) now goes only to the log. Reviewers should be comfortable that this swallows no diagnostic the operator currently relies on.</div>
+              </li>
+              <li class="audit-item weak">
+                <span class="badge weak">Weakly covered by tests</span>
+                <div>There is <em>no</em> automated test for the SIGINT contract. The AC states "Under a PTY, sending SIGINT to sdlc during a step exits with code 130, leaves no lingering claude / sleep descendants" — but the test suite only exercises <code class="inline">--help</code>, <code class="inline">-h</code>, <code class="inline">--version</code>, and <code class="inline">HEARTBEAT_INTERVAL</code>. Signal-handling tests are admittedly annoying (need a PTY harness and a sacrificial long-running step fixture), but this is the highest-complexity code in the branch and has zero automated regression coverage.</div>
+              </li>
+            </ul>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>Exit-code propagation: <code class="inline">wait "$CURRENT_STEP_PID"</code> returns the subshell's exit code, which is then captured into <code class="inline">exit_code</code> exactly as the retry loop previously expected. Timeout (124), validation failure (2), and success (0) all still flow through unchanged.</li>
+              <li>On SIGINT: orchestrator prints <code class="inline">Interrupt received. Terminating current step and exiting...</code>, followed by <code class="inline">Pipeline halted by user (SIGINT).</code>, then exits 130.</li>
+              <li>On SIGTERM (same trap): identical behavior.</li>
+              <li>Subshell's own stderr (bash job-control notices, any accidental internal errors) now goes to the per-step log instead of the terminal.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Confirm <code class="inline">wait $PID</code> reliably returns the <em>subshell's</em> exit status even after the trap fires — it does, because the handler calls <code class="inline">wait "$pid" 2&gt;/dev/null || true</code> and then <code class="inline">exit 130</code>, so the parent never returns to the retry loop's <code class="inline">exit_code=$?</code> line after an interrupt. No ambiguity.</li>
+              <li><code class="inline">signal_process_tree</code> is recursive and unbounded. A pathological Claude child fork bomb could blow the bash call stack. Acceptable risk given the use case.</li>
+              <li>The TERM→KILL poll uses <code class="inline">sleep 0.1</code> × 20 = 2s. Is 2s enough for Claude's stdout <code class="inline">tee</code> to flush? If not, a KILL could lose trailing summary content. Consider whether this window is tunable.</li>
+              <li>The <code class="inline">exec 2&gt;&gt;"$log_file"</code> happens <em>inside</em> the subshell, so Claude's own stderr redirect (<code class="inline">2&gt; &gt;(tee …)</code>) later in the pipeline wins for Claude — good. But confirm this is the intended layering: subshell-meta stderr → log; Claude stderr → tee → terminal + log.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title"><span>NEW CODE</span><span>run-pipeline.sh (top-level)</span></div>
+            <div class="snippet">
+              <div class="snippet-head">Signal-handling scaffolding</div>
+<pre><span class="com"># Globals the interrupt handler reads. execute.sh sets CURRENT_STEP_PID to the</span>
+<span class="com"># PID of the backgrounded Claude subshell; the heartbeat loop below sets</span>
+<span class="com"># STEP_HEARTBEAT_PID. Both stay empty when no step is active.</span>
+<span class="var">CURRENT_STEP_PID</span>=<span class="str">""</span>
+<span class="var">STEP_HEARTBEAT_PID</span>=<span class="str">""</span>
+
+<span class="fn">signal_process_tree</span>() {
+  <span class="kw">local</span> signal=<span class="str">"$1"</span>
+  <span class="kw">local</span> root=<span class="str">"$2"</span>
+  <span class="kw">local</span> child
+  <span class="kw">for</span> child <span class="kw">in</span> $(pgrep -P <span class="str">"$root"</span> 2&gt;/dev/null || <span class="kw">true</span>); <span class="kw">do</span>
+    signal_process_tree <span class="str">"$signal"</span> <span class="str">"$child"</span>
+  <span class="kw">done</span>
+  <span class="kw">kill</span> <span class="str">"-$signal"</span> <span class="str">"$root"</span> 2&gt;/dev/null || <span class="kw">true</span>
+}
+
+<span class="fn">terminate_current_step</span>() {
+  <span class="kw">local</span> pid=<span class="str">"$CURRENT_STEP_PID"</span>
+  [[ -z <span class="str">"$pid"</span> ]] &amp;&amp; <span class="kw">return</span> <span class="num">0</span>
+  <span class="kw">if</span> <span class="kw">kill</span> -0 <span class="str">"$pid"</span> 2&gt;/dev/null; <span class="kw">then</span>
+    signal_process_tree TERM <span class="str">"$pid"</span>
+    <span class="kw">local</span> waited=<span class="num">0</span>
+    <span class="kw">while</span> [[ <span class="str">"$waited"</span> -lt <span class="num">20</span> ]] &amp;&amp; <span class="kw">kill</span> -0 <span class="str">"$pid"</span> 2&gt;/dev/null; <span class="kw">do</span>
+      <span class="kw">sleep</span> <span class="num">0.1</span>
+      waited=$((waited + <span class="num">1</span>))
+    <span class="kw">done</span>
+    <span class="kw">if</span> <span class="kw">kill</span> -0 <span class="str">"$pid"</span> 2&gt;/dev/null; <span class="kw">then</span>
+      signal_process_tree KILL <span class="str">"$pid"</span>
+    <span class="kw">fi</span>
+  <span class="kw">fi</span>
+  <span class="kw">wait</span> <span class="str">"$pid"</span> 2&gt;/dev/null || <span class="kw">true</span>
+  <span class="var">CURRENT_STEP_PID</span>=<span class="str">""</span>
+}
+
+<span class="fn">handle_interrupt</span>() {
+  <span class="kw">printf</span> <span class="str">'\n'</span> &gt;&amp;2
+  sdlc_log <span class="str">"WARN"</span> <span class="str">"Interrupt received. Terminating current step and exiting..."</span>
+  stop_heartbeat
+  terminate_current_step
+  sdlc_log <span class="str">"WARN"</span> <span class="str">"Pipeline halted by user (SIGINT)."</span>
+  <span class="com"># 130 = 128 + SIGINT(2), the conventional shell exit code for Ctrl+C.</span>
+  <span class="kw">exit</span> <span class="num">130</span>
+}
+
+<span class="kw">trap</span> handle_interrupt INT TERM
+</pre>
+            </div>
+
+            <div class="code-title"><span>NEW CODE</span><span>orchestrator/lib/execute.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">Backgrounded, signal-interruptible Claude subshell</div>
+<pre><span class="kw">set</span> +e
+<span class="com"># Background the subshell so the orchestrator's INT/TERM trap can kill it</span>
+<span class="com"># cleanly. A synchronous subshell inside a pipeline blocks bash's signal</span>
+<span class="com"># delivery until the inner command exits.</span>
+<span class="com"># CURRENT_STEP_PID is intentionally NOT `local` — the interrupt handler</span>
+<span class="com"># reads it from the parent scope.</span>
+(
+  <span class="kw">cd</span> <span class="str">"$repo_root"</span>
+  : &gt; <span class="str">"$log_file"</span>
+  : &gt; <span class="str">"$summary_file"</span>
+  <span class="com"># Route subshell's own stderr (e.g. bash's "Terminated: 15" on SIGKILL)</span>
+  <span class="com"># into the step log so it doesn't clutter the terminal. Claude's stderr</span>
+  <span class="com"># is still captured explicitly below via 2&gt; &gt;(tee …).</span>
+  <span class="kw">exec</span> 2&gt;&gt;<span class="str">"$log_file"</span>
+  <span class="com"># ... claude invocation pipeline (unchanged) ...</span>
+  <span class="kw">exit</span> <span class="str">"${PIPESTATUS[1]}"</span>
+) &amp;
+<span class="var">CURRENT_STEP_PID</span>=$!
+<span class="kw">wait</span> <span class="str">"$CURRENT_STEP_PID"</span>
+<span class="kw">local</span> exit_code=$?
+<span class="var">CURRENT_STEP_PID</span>=<span class="str">""</span>
+<span class="kw">set</span> -e
+</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 3: Heartbeat loop -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 3: Heartbeat loop so long steps aren't silent</h2>
+          <div class="paths">
+            <span class="path">orchestrator/config.sh</span>
+            <span class="path">orchestrator/run-pipeline.sh</span>
+            <span class="path">tests/config_unit_test.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Emit a periodic <code class="inline">&lt;step&gt; still running (elapsed: Ns)</code> line while a
+              Claude step is in flight, so the terminal never goes silent for minutes at a time. Make the cadence
+              tunable and disable-able via a new <code class="inline">HEARTBEAT_INTERVAL</code> knob.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              Claude steps routinely take 2–5 minutes. With the old behavior, an operator had no way to tell
+              whether the pipeline was progressing or had silently deadlocked. The task explicitly frames this
+              as an ergonomics gap: "the terminal goes silent for minutes at a time." The heartbeat is a
+              second-choice solution to streaming Claude's actual progress — Claude's <code class="inline">--output-format text</code>
+              contract (preserved by technical constraint for downstream steps 9/10) gives no intermediate
+              stream, so an out-of-band timer is the cheapest workable signal.
+            </p>
+
+            <h3>Justification audit</h3>
+            <ul class="audit-list">
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">HEARTBEAT_INTERVAL="${HEARTBEAT_INTERVAL:-120}"</code> in <code class="inline">config.sh</code>. Default 120s is explicit in the AC; environment-override path is standard.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">emit_heartbeat_loop()</code> using <code class="inline">sleep &amp; wait</code> (rather than raw <code class="inline">sleep</code>). Raw <code class="inline">sleep</code> blocks signal delivery in a bash subshell the same way a synchronous pipeline does — the author clearly hit this and documented it.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div>Per-loop <code class="inline">trap 'kill "$sleep_pid" 2&gt;/dev/null; exit 0' TERM INT</code>. This is what <code class="inline">stop_heartbeat</code> relies on in Block 2 — a tight handoff between the signal path and the heartbeat subshell.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div>Conditional spawn in <code class="inline">execute_step_with_retries</code>: only start when <code class="inline">HEARTBEAT_INTERVAL &gt; 0</code>. Honors the "<code class="inline">0</code> disables heartbeats" AC.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">stop_heartbeat</code> called in both the happy path (after <code class="inline">wait</code>) and the interrupt path (from <code class="inline">handle_interrupt</code>). Double-cleanup is idempotent because the function no-ops on empty/dead PID.</div>
+              </li>
+              <li class="audit-item weak">
+                <span class="badge weak">Weakly covered by tests</span>
+                <div>Tests assert the <em>config contract</em> (default 120, env override) but do <em>not</em> assert that the loop actually fires, emits the expected log line, or stops cleanly. A 2-second cadence + a no-op fixture step would catch regressions like a broken <code class="inline">sleep &amp; wait</code> or a typo in the log format. Consider adding one.</div>
+              </li>
+            </ul>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>During each step, a child process prints an <code class="inline">INFO</code> line every <code class="inline">HEARTBEAT_INTERVAL</code> seconds.</li>
+              <li>Log format: <code class="inline">&lt;label&gt; (attempt N) still running (elapsed: Ms)</code>.</li>
+              <li>Setting <code class="inline">HEARTBEAT_INTERVAL=0</code> disables the feature entirely (no heartbeat subshell is spawned).</li>
+              <li>Elapsed time is measured via <code class="inline">$SECONDS</code>, which is per-subshell and resets correctly on each attempt.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li><code class="inline">$SECONDS</code> is integer-only, so elapsed time rounds down at the second boundary. Acceptable.</li>
+              <li>The <code class="inline">[[ "$HEARTBEAT_INTERVAL" -gt 0 ]]</code> check will error if <code class="inline">HEARTBEAT_INTERVAL</code> is set to a non-numeric value (e.g. <code class="inline">"off"</code>). The docs only claim numeric support, so this is probably fine — but an operator who tries <code class="inline">HEARTBEAT_INTERVAL=""</code> via an empty override will crash the pipeline. Consider clamping.</li>
+              <li>Heartbeat lines land in the orchestrator log alongside Claude's streamed stdout (via <code class="inline">tee</code>) — confirm they don't interleave confusingly in the per-step log.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title"><span>NEW CODE</span><span>orchestrator/config.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">HEARTBEAT_INTERVAL knob</div>
+<pre><span class="com"># Emit "still running (elapsed Xs)" heartbeats while a step's Claude call is</span>
+<span class="com"># in flight — prevents the terminal from going silent for minutes at a time.</span>
+<span class="com"># Set to 0 to disable.</span>
+<span class="var">HEARTBEAT_INTERVAL</span>=<span class="str">"${HEARTBEAT_INTERVAL:-120}"</span>
+</pre>
+            </div>
+
+            <div class="code-title"><span>NEW CODE</span><span>run-pipeline.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">emit_heartbeat_loop &amp; stop_heartbeat</div>
+<pre><span class="fn">stop_heartbeat</span>() {
+  <span class="kw">if</span> [[ -n <span class="str">"$STEP_HEARTBEAT_PID"</span> ]] &amp;&amp; <span class="kw">kill</span> -0 <span class="str">"$STEP_HEARTBEAT_PID"</span> 2&gt;/dev/null; <span class="kw">then</span>
+    <span class="kw">kill</span> -TERM <span class="str">"$STEP_HEARTBEAT_PID"</span> 2&gt;/dev/null || <span class="kw">true</span>
+    <span class="kw">wait</span> <span class="str">"$STEP_HEARTBEAT_PID"</span> 2&gt;/dev/null || <span class="kw">true</span>
+  <span class="kw">fi</span>
+  <span class="var">STEP_HEARTBEAT_PID</span>=<span class="str">""</span>
+}
+
+<span class="fn">emit_heartbeat_loop</span>() {
+  <span class="kw">local</span> label=<span class="str">"$1"</span>
+  <span class="kw">local</span> interval=<span class="str">"$2"</span>
+  <span class="kw">local</span> start=$SECONDS
+  <span class="kw">local</span> sleep_pid=<span class="str">""</span>
+  <span class="com"># `wait` (unlike the raw `sleep` builtin) is interruptible by signals</span>
+  <span class="com"># delivered to this subshell. The TERM trap kills the sleep grandchild</span>
+  <span class="com"># so it doesn't linger, then exits cleanly.</span>
+  <span class="kw">trap</span> <span class="str">'kill "$sleep_pid" 2&gt;/dev/null; exit 0'</span> TERM INT
+  <span class="kw">while</span> :; <span class="kw">do</span>
+    <span class="kw">sleep</span> <span class="str">"$interval"</span> &amp;
+    sleep_pid=$!
+    <span class="kw">wait</span> <span class="str">"$sleep_pid"</span> 2&gt;/dev/null || <span class="kw">true</span>
+    sleep_pid=<span class="str">""</span>
+    <span class="kw">local</span> elapsed=$((SECONDS - start))
+    sdlc_log <span class="str">"INFO"</span> <span class="str">"$label still running (elapsed: ${elapsed}s)"</span>
+  <span class="kw">done</span>
+}
+</pre>
+            </div>
+
+            <div class="snippet">
+              <div class="snippet-head">Integration inside execute_step_with_retries</div>
+<pre>sdlc_log <span class="str">"INFO"</span> <span class="str">"Attempt $attempt/$max_retries"</span>
+
+<span class="kw">if</span> [[ <span class="str">"$HEARTBEAT_INTERVAL"</span> -gt <span class="num">0</span> ]]; <span class="kw">then</span>
+  emit_heartbeat_loop <span class="str">"$label (attempt $attempt)"</span> <span class="str">"$HEARTBEAT_INTERVAL"</span> &amp;
+  <span class="var">STEP_HEARTBEAT_PID</span>=$!
+<span class="kw">fi</span>
+
+<span class="kw">set</span> +e
+run_claude_step <span class="str">"$step_file"</span> ... <span class="str">"$attempt_summary"</span>
+<span class="kw">local</span> exit_code=$?
+<span class="kw">set</span> -e
+
+stop_heartbeat
+</pre>
+            </div>
+
+            <div class="code-title"><span>NEW CODE</span><span>tests/config_unit_test.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">HEARTBEAT_INTERVAL contract tests</div>
+<pre><span class="fn">test_config_heartbeat_interval_has_sensible_default</span>() {
+  load_config
+  assert_equals <span class="str">"120"</span> <span class="str">"$HEARTBEAT_INTERVAL"</span> \
+    <span class="str">"Expected HEARTBEAT_INTERVAL to default to 120s so long steps aren't silent."</span>
+}
+
+<span class="fn">test_config_heartbeat_interval_honors_environment_override</span>() {
+  <span class="kw">local</span> HEARTBEAT_INTERVAL=<span class="num">30</span>
+  load_config
+  assert_equals <span class="str">"30"</span> <span class="str">"$HEARTBEAT_INTERVAL"</span> \
+    <span class="str">"Expected preset HEARTBEAT_INTERVAL in the environment to override the default."</span>
+}
+</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 4: In-run feedback (tail hint + status excerpt) -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 4: In-run feedback — <code class="inline">tail -f</code> hint on start, Status excerpt on success</h2>
+          <div class="paths">
+            <span class="path">orchestrator/lib/execute.sh</span>
+            <span class="path">orchestrator/run-pipeline.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Two small signal-boosts around each step: at start, tell the operator how to tail the log from
+              another terminal; at success, echo the one-line Status field from the step's final summary
+              back to the terminal so they don't have to open the summary file to see what happened.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              These round out the "in-run feedback" half of the ergonomics fix. The tail hint is an AC item
+              ("must print a <code class="inline">Follow progress: tail -f &lt;log&gt;</code> hint"). The Status
+              excerpt is the <em>terminal</em> counterpart to the heartbeat: the heartbeat tells you a step is
+              alive, the excerpt tells you <em>what</em> it accomplished. Together they close the feedback loop
+              without forcing the operator to read the summary file.
+            </p>
+
+            <h3>Justification audit</h3>
+            <ul class="audit-list">
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">sdlc_log "INFO" "Follow progress: tail -f $log_file"</code> added to the step-launch banner. Literal AC requirement.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">emit_step_summary_excerpt()</code> called only on success (after <code class="inline">update_context</code>). Explicit AC: "When a step completes successfully, the orchestrator must print a one-line excerpt from the step summary."</div>
+              </li>
+              <li class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <div>The regex <code class="inline">^[[:space:]]*(5\.[[:space:]]*)?Status:</code> accepts both raw <code class="inline">Status:</code> and the numbered form <code class="inline">5. Status:</code> used by the final-response template. Future-proof against trivial format drift, but <em>tightly coupled</em> to the current step-file convention that Status is field #5.</div>
+              </li>
+              <li class="audit-item probable">
+                <span class="badge probable">Probably justified</span>
+                <div>Early-return on empty summary (<code class="inline">[[ ! -s "$summary_path" ]] &amp;&amp; return 0</code>). Silences a known edge case (timeout with no summary), consistent with the rest of the orchestrator's "degrade quietly" policy.</div>
+              </li>
+            </ul>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>Orchestrator log (and terminal) gains two new INFO lines per step: <code class="inline">Follow progress: …</code> at start, <code class="inline">&lt;label&gt;: Status: READY|BLOCKED|…</code> at success.</li>
+              <li>No impact on the step contract itself (summary files, exit codes, validation).</li>
+              <li>No excerpt is emitted on timeout or validation failure — the existing WARN lines cover those paths.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>The regex hard-codes the numeric prefix <code class="inline">5.</code>. If a step file ever reorders its final-response sections (task definitions currently all use the same template, but that's a convention not a contract), the excerpt silently goes missing. Consider documenting the contract in <code class="inline">CLAUDE.md</code> or a step-template file.</li>
+              <li><code class="inline">grep -E … | tail -n 1</code> picks the last match — good for a multi-pass summary, but if a step's prose contains the word "Status:" earlier (e.g. "Status: this section will explain..."), the excerpt could pick up the wrong line. Unlikely in practice.</li>
+              <li>No test asserts the excerpt is emitted. Minor — the output is informational, not contractual.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title"><span>NEW CODE</span><span>orchestrator/lib/execute.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">Follow-progress hint at step start</div>
+<pre>sdlc_log <span class="str">"INFO"</span> <span class="str">"Model: $CLAUDE_MODEL | Effort: $CLAUDE_EFFORT | Permission mode: $permission_mode"</span>
+sdlc_log <span class="str">"INFO"</span> <span class="str">"Timeout: ${timeout_seconds}s | Step log: $log_file"</span>
+sdlc_log <span class="str">"INFO"</span> <span class="str">"Follow progress: tail -f $log_file"</span>
+</pre>
+            </div>
+
+            <div class="code-title"><span>NEW CODE</span><span>orchestrator/run-pipeline.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">emit_step_summary_excerpt</div>
+<pre><span class="com"># Print a short, terminal-friendly excerpt of the step's final response so</span>
+<span class="com"># the operator sees what the step accomplished without hunting through</span>
+<span class="com"># logs. Looks for the canonical Status line.</span>
+<span class="fn">emit_step_summary_excerpt</span>() {
+  <span class="kw">local</span> label=<span class="str">"$1"</span>
+  <span class="kw">local</span> summary_path=<span class="str">"$2"</span>
+  [[ ! -s <span class="str">"$summary_path"</span> ]] &amp;&amp; <span class="kw">return</span> <span class="num">0</span>
+
+  <span class="kw">local</span> status_line
+  status_line=$(grep -E <span class="str">'^[[:space:]]*(5\.[[:space:]]*)?Status:'</span> <span class="str">"$summary_path"</span> | <span class="kw">tail</span> -n <span class="num">1</span> || <span class="kw">true</span>)
+  <span class="kw">if</span> [[ -n <span class="str">"$status_line"</span> ]]; <span class="kw">then</span>
+    sdlc_log <span class="str">"INFO"</span> <span class="str">"$label: $(printf '%s' "</span>$status_line<span class="str">" | sed -E 's/^[[:space:]]*//')"</span>
+  <span class="kw">fi</span>
+}
+</pre>
+            </div>
+
+            <div class="snippet">
+              <div class="snippet-head">Invocation on success</div>
+<pre><span class="kw">cp</span> <span class="str">"$attempt_log"</span> <span class="str">"$LOG_DIR/${base_name}.log"</span>
+<span class="kw">cp</span> <span class="str">"$attempt_summary"</span> <span class="str">"$LOG_DIR/${base_name}_summary.md"</span>
+update_context <span class="str">"$label"</span> <span class="str">"$LOG_DIR/${base_name}_summary.md"</span> <span class="str">"$CONTEXT_FILE"</span>
+emit_step_summary_excerpt <span class="str">"$label"</span> <span class="str">"$LOG_DIR/${base_name}_summary.md"</span>
+<span class="kw">return</span> <span class="num">0</span>
+</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 5: Test coverage -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 5: Unit tests for the new CLI surface</h2>
+          <div class="paths">
+            <span class="path">tests/bin_wrappers_unit_test.sh</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Pin the <code class="inline">--help</code>/<code class="inline">-h</code>/<code class="inline">--version</code>
+              contracts introduced in Block 1 so future refactors can't silently regress them — particularly the
+              subtle one: <code class="inline">--help</code> must work <em>outside</em> a git repository.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              The AC closes with "new tests cover the <code class="inline">--help</code>, <code class="inline">-h</code>,
+              <code class="inline">--version</code>, and <code class="inline">HEARTBEAT_INTERVAL</code> contracts."
+              The <code class="inline">HEARTBEAT_INTERVAL</code> half lives in <code class="inline">config_unit_test.sh</code>
+              (covered in Block 3); this block adds the bin-wrapper half.
+            </p>
+
+            <h3>Justification audit</h3>
+            <ul class="audit-list">
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">test_sdlc_help_prints_user_facing_overview</code> asserts on the four documented section headers (<code class="inline">USAGE</code>, <code class="inline">TYPICAL FLOW</code>, <code class="inline">Press Ctrl+C</code>, <code class="inline">sdlc-status</code>) <em>and</em> separately covers the <code class="inline">-h</code> short alias.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">test_sdlc_help_short_circuits_orchestrator_without_git_repo</code> — the <em>only</em> test that validates the intercept happens before repo-rooted work. Uses <code class="inline">env -i</code> + a scratch temp dir to prove the help path is genuinely hermetic. Highest-value test in the block.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">test_sdlc_version_prints_home_and_revision</code> confirms the <code class="inline">SDLC_HOME=</code> prefix, which is the operator's "which install is on PATH" hook.</div>
+              </li>
+            </ul>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>Suite total: <code class="inline">bin_wrappers_unit_test.sh</code> grows 4 → 7 tests; full suite 85 → 90 (recorded in <code class="inline">.sdlc/artifacts/test-results.md</code>).</li>
+              <li>Tests are self-contained, no new helper utilities.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>The no-git-repo test uses <code class="inline">env -i</code> + <code class="inline">PATH="$BIN_DIR:/usr/bin:/bin"</code>. If the system's <code class="inline">git</code> is in <code class="inline">/usr/local/bin</code> or Homebrew's <code class="inline">/opt/homebrew/bin</code>, <code class="inline">git</code> would not be in PATH — which is fine because <code class="inline">print_version</code>'s <code class="inline">command -v git</code> degrades gracefully, but the <code class="inline">--help</code> path doesn't touch git at all so it is irrelevant here.</li>
+              <li>Missing: an assertion that <code class="inline">PIPELINE STEPS</code> (the third required section from the AC) appears in the output. The current test checks four sections but the AC names five. Low-risk omission — the test still fails if the heredoc is removed — but the coverage claim in the PR body ("cover the <code class="inline">--help</code> contract") is slightly stronger than the test proves.</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title"><span>NEW CODE</span><span>tests/bin_wrappers_unit_test.sh</span></div>
+            <div class="snippet">
+              <div class="snippet-head">Help / -h / --version contract tests</div>
+<pre><span class="fn">test_sdlc_help_prints_user_facing_overview</span>() {
+  <span class="kw">local</span> output
+  <span class="kw">local</span> status=<span class="num">0</span>
+  output=$(<span class="str">"$BIN_DIR/sdlc"</span> --help 2&gt;&amp;1) || status=$?
+  assert_exit_code <span class="num">0</span> <span class="str">"$status"</span> <span class="str">"sdlc --help should exit 0. Output: $output"</span>
+  assert_contains <span class="str">"$output"</span> <span class="str">"USAGE"</span> ...
+  assert_contains <span class="str">"$output"</span> <span class="str">"TYPICAL FLOW"</span> ...
+  assert_contains <span class="str">"$output"</span> <span class="str">"Press Ctrl+C"</span> ...
+  assert_contains <span class="str">"$output"</span> <span class="str">"sdlc-status"</span> ...
+
+  <span class="kw">local</span> short_output
+  <span class="kw">local</span> short_status=<span class="num">0</span>
+  short_output=$(<span class="str">"$BIN_DIR/sdlc"</span> -h 2&gt;&amp;1) || short_status=$?
+  assert_exit_code <span class="num">0</span> <span class="str">"$short_status"</span> ...
+}
+
+<span class="fn">test_sdlc_help_short_circuits_orchestrator_without_git_repo</span>() {
+  use_temp_dir
+  <span class="kw">local</span> fake_home=<span class="str">"$TEST_TEMP_DIR/home"</span>
+  <span class="kw">mkdir</span> -p <span class="str">"$fake_home"</span>
+
+  <span class="kw">local</span> output
+  <span class="kw">local</span> status=<span class="num">0</span>
+  output=$(<span class="kw">cd</span> <span class="str">"$TEST_TEMP_DIR"</span> &amp;&amp; <span class="kw">env</span> -i \
+    HOME=<span class="str">"$fake_home"</span> \
+    PATH=<span class="str">"$BIN_DIR:/usr/bin:/bin"</span> \
+    sdlc --help 2&gt;&amp;1) || status=$?
+
+  assert_exit_code <span class="num">0</span> <span class="str">"$status"</span> ...
+  assert_contains <span class="str">"$output"</span> <span class="str">"USAGE"</span> ...
+}
+
+<span class="fn">test_sdlc_version_prints_home_and_revision</span>() {
+  <span class="kw">local</span> output
+  <span class="kw">local</span> status=<span class="num">0</span>
+  output=$(<span class="str">"$BIN_DIR/sdlc"</span> --version 2&gt;&amp;1) || status=$?
+  assert_exit_code <span class="num">0</span> <span class="str">"$status"</span> ...
+  assert_contains <span class="str">"$output"</span> <span class="str">"sdlc (SDLC_HOME="</span> ...
+}
+</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Block 6: SDLC bookkeeping churn -->
+      <!-- ============================================================= -->
+      <section class="card">
+        <div class="card-head">
+          <h2>Block 6: SDLC pipeline bookkeeping (task + test-results snapshots)</h2>
+          <div class="paths">
+            <span class="path">.sdlc/task.md</span>
+            <span class="path">.sdlc/artifacts/test-results.md</span>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="pane">
+            <h3>Objective</h3>
+            <p>
+              Rewrite the feature-intent document for SDLC-3 (replacing SDLC-2's content) and refresh the
+              test-results artifact with the new totals. These are pipeline-produced artifacts, not runtime code.
+            </p>
+
+            <h3>Why this change exists</h3>
+            <p>
+              The SDLC pipeline uses <code class="inline">.sdlc/task.md</code> as the canonical input for Steps
+              01–02 and <code class="inline">.sdlc/artifacts/test-results.md</code> as the canonical output of
+              Step 06. When the repo is used to develop the SDLC tooling itself (as here), these files are
+              necessarily overwritten per feature — and the previous feature's content lived on the branch's
+              starting point, so the rewrite is unavoidable if the convention is to be honored.
+            </p>
+
+            <h3>Justification audit</h3>
+            <ul class="audit-list">
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">.sdlc/task.md</code> rewritten to describe SDLC-3. Required by the pipeline convention — later steps read this file.</div>
+              </li>
+              <li class="audit-item strong">
+                <span class="badge strong">Strongly justified</span>
+                <div><code class="inline">.sdlc/artifacts/test-results.md</code> updated to <code class="inline">Total: 90 / Passed: 90</code>. Mechanical record of the Step 06 run.</div>
+              </li>
+              <li class="audit-item unclear">
+                <span class="badge unclear">Reviewer question</span>
+                <div>Whether these pipeline-bookkeeping files belong on a <em>product</em> PR is a policy question, not a code one. They add +140 lines of churn that the reviewer must scan past to reach the functional changes. Not a blocker; worth noting for future PR hygiene discussion.</div>
+              </li>
+            </ul>
+
+            <h3>Behavioral impact</h3>
+            <ul>
+              <li>No runtime impact.</li>
+              <li>Affects only pipeline operators who rerun SDLC-3 from this checkout.</li>
+            </ul>
+
+            <h3>Reviewer scrutiny</h3>
+            <ul>
+              <li>Consider whether <code class="inline">.sdlc/</code> scratch artifacts should be <code class="inline">.gitignore</code>d below <code class="inline">logs/</code> (the task.md file stays in-tree but per-run artifacts could rotate).</li>
+            </ul>
+          </div>
+          <div class="pane">
+            <div class="code-title"><span>NEW CONTENT</span><span>.sdlc/artifacts/test-results.md (header)</span></div>
+            <div class="snippet">
+              <div class="snippet-head">Refreshed totals</div>
+<pre>Result: PASS
+Run at: 2026-04-22T14:19:26Z
+Command: bash tests/run.sh
+
+## Summary
+- Total: 90
+- Passed: 90
+- Failed: 0
+- Skipped: 0
+</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================= -->
+      <!-- Footer -->
+      <!-- ============================================================= -->
+      <section class="card footer-card">
+        <h2>Reviewer wrap-up</h2>
+        <div class="footer-grid">
+          <div class="footer-box">
+            <h3>Overall PR objective</h3>
+            <p>
+              Close three operator-facing ergonomics gaps in the <code class="inline">sdlc</code> CLI —
+              discoverability (<code class="inline">--help</code> / <code class="inline">--version</code>),
+              silence during long steps (heartbeat + <code class="inline">tail -f</code> hint + Status excerpt),
+              and broken Ctrl+C (signal trap + process-tree walk + backgrounded subshell) — with unit tests
+              pinning the config/CLI contracts.
+            </p>
+          </div>
+
+          <div class="footer-box">
+            <h3>Potentially superfluous changes</h3>
+            <ul>
+              <li>The one-line header-comment addition in <code class="inline">bin/sdlc</code> is tiny but not called for by any AC — pure doc sync.</li>
+              <li>The <code class="inline">.sdlc/artifacts/test-results.md</code> rewrite is mechanical; reviewers may wonder whether the pipeline-bookkeeping files should ship in the same PR as the functional changes.</li>
+            </ul>
+          </div>
+
+          <div class="footer-box">
+            <h3>Changes that need author explanation</h3>
+            <ul>
+              <li>Why <code class="inline">2s</code> (20 × 100ms) for the TERM→KILL poll in <code class="inline">terminate_current_step</code>? Is that enough for Claude's tee to flush trailing output?</li>
+              <li>Why the <code class="inline">(5\.[[:space:]]*)?</code> alternation in <code class="inline">emit_step_summary_excerpt</code>'s regex? Is the <code class="inline">5.</code> numeric prefix a documented contract or a convention?</li>
+              <li>What happens if <code class="inline">HEARTBEAT_INTERVAL</code> is set to a non-numeric string? <code class="inline">[[ -gt 0 ]]</code> will error out — consider clamping or validating at load time.</li>
+            </ul>
+          </div>
+
+          <div class="footer-box">
+            <h3>Missing or weak test coverage</h3>
+            <ul>
+              <li><strong>No test for the SIGINT contract.</strong> The most complex code in the branch (backgrounded subshell + process-tree walk + trap) has zero automated regression coverage. The AC explicitly describes a PTY-based scenario — consider a fixture step that <code class="inline">sleep 30</code>s, send SIGINT via <code class="inline">expect</code> or <code class="inline">script</code>, and assert exit code 130 + no orphan <code class="inline">sleep</code> PIDs. The test file's header already acknowledges this gap.</li>
+              <li><strong>No test that the heartbeat actually fires.</strong> Config default is covered, but the loop's log format (<code class="inline">still running (elapsed: Ns)</code>) isn't. A 2-second-cadence smoke test would catch typos or <code class="inline">sleep &amp; wait</code> breakage.</li>
+              <li><strong>No test that the Status excerpt is emitted.</strong> Minor — the excerpt is informational, not a contract — but the regex's <code class="inline">5.</code> dependency is the exact kind of fragility a test would catch.</li>
+              <li>The help-content test omits the <code class="inline">PIPELINE STEPS</code> header (the AC names five sections; the test checks four).</li>
+            </ul>
+          </div>
+
+          <div class="footer-box" style="grid-column: 1 / -1;">
+            <h3>Reviewer questions</h3>
+            <ol>
+              <li>Is the <code class="inline">exec 2&gt;&gt;"$log_file"</code> inside the backgrounded subshell safe against any diagnostic currently relied on by operators? (Bash's <code class="inline">Terminated: 15</code> is the documented target; are there others?)</li>
+              <li>Should <code class="inline">signal_process_tree</code> be iterative rather than recursive to defend against deep Claude child chains? (Probably over-engineering, but worth a one-line answer.)</li>
+              <li>Does the <code class="inline">5. Status:</code> step-file convention warrant being codified in a <code class="inline">CLAUDE.md</code> / step template so the excerpt regex doesn't silently break?</li>
+              <li>Should a signal-handling integration test be a follow-up ticket, or a blocker for this PR? The AC implies it should be covered, but the suite doesn't.</li>
+              <li>Is <code class="inline">HEARTBEAT_INTERVAL=0</code> the preferred disable mechanism, or would an explicit <code class="inline">HEARTBEAT_ENABLED=false</code> be more discoverable?</li>
+            </ol>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: 22px;">
+          Generated for branch <code class="inline">marek/sdlc-3-cli-ux</code> against <code class="inline">main</code> • Commits <code class="inline">5da5f10</code>, <code class="inline">d14a472</code>.
+        </p>
+      </section>
+
+    </div>
+  </div>
+</body>
+</html>

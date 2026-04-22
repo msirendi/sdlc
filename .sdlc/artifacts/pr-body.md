@@ -1,30 +1,116 @@
-Fixes #SDLC-2
+Fixes #SDLC-3
 
 ## Summary
-Restructure the SDLC pipeline so test authoring, test execution, and test-failure repair are three distinct steps with strict boundaries: Step 3 writes tests from the spec and commits them red, Step 4 implements against those committed tests, Step 6 only runs the suite and writes a machine-readable report, and a new Step 7 only fixes production code in response to that report. The orchestrator now owns the 06↔07 loop (up to `MAX_TEST_FIX_ITERATIONS` iterations) so "run tests" and "fix code" are separate Claude invocations that cannot re-couple. Downstream steps (open-PR through cleanup) shift from 07–16 to 08–17 so the numbering stays dense and consistent across step files, config, orchestrator, wrappers, README, and tests.
+Closes three operator-facing ergonomics gaps in the `sdlc` command that
+together made a pipeline run feel opaque and unsafe to interrupt: there
+was no first-class help screen, the terminal went silent for minutes at
+a time while a Claude step ran, and Ctrl+C did not reliably exit — it
+would usually leave `claude` / `sleep` / `timeout` / `tee` descendants
+running in the background while the operator's shell returned. This PR
+adds a user-focused `sdlc --help` (plus `-h` and `--version`) that works
+outside a git repo, prints a `tail -f <log>` follow-along hint and
+periodic "still running (elapsed: Ns)" heartbeats during each step, emits
+a one-line `Status:` excerpt on successful step completion, and installs
+a SIGINT/SIGTERM trap that walks the Claude subshell's process tree via
+`pgrep -P`, TERM/KILL-escalates every descendant, and exits 130.
 
 ## Changes
-- **Step-file renumbering and rewrites:** Rewrites `03-tests.md` (spec-only derivation, red-commit mandate, BLOCKED on ambiguity), rewrites `04-implement.md` (implementation works against committed tests, build/typecheck only, no test execution, no test edits, BLOCKED routes back to Step 2 or 3), rewrites `06-run-tests.md` (run-only, writes `.sdlc/artifacts/test-results.md` with a parseable first-line `Result: PASS|FAIL`, no fixes). Adds `07-fix-test-failures.md` (reads the report, fixes production code, tests are read-only, does not execute the suite). Shifts `05-agents-md-check.md` into slot 05 and renumbers `07-open-pr.md → 08`, `08-review-comments.md → 09`, `09-semantic-diff-report.md → 10`, `10-address-findings.md → 11`, `11-ultra-review.md → 12`, `12-push-and-hooks.md → 13`, `13-fix-ci.md → 14`, `14-rebase.md → 15`, `15-merge.md → 16`, `16-cleanup.md → 17`; all internal cross-references (Step N → Step N+1 links, "Completed" context headers, guardrail callouts) are updated to match.
-- **Orchestrator loop driver:** Adds `orchestrator/lib/test_fix_loop.sh` with `sdlc_test_results_status` to parse the first `Result:` line from `.sdlc/artifacts/test-results.md` as PASS/FAIL/UNKNOWN (UNKNOWN treated as non-pass so malformed reports cannot silently skip Step 7). Updates `orchestrator/run-pipeline.sh` to (a) filter Step 7 out of the top-level planned manifest whenever Step 6 is planned — so Step 7 isn't double-scheduled — while still allowing `--only 07-fix-test-failures.md` to run it standalone, and (b) drive `06 → [07 → 06] × N` via `execute_test_loop`, halting on PASS or after `MAX_TEST_FIX_ITERATIONS` (default 3). Per-iteration logs/summaries are suffixed `_iterN` so repeated invocations don't overwrite each other's artifacts.
-- **Config:** `orchestrator/config.sh` renumbers every entry in `STEP_TIMEOUTS` and `STEP_RETRY_COUNTS`, adds timeouts/retries for `03-tests.md`, `04-implement.md`, `06-run-tests.md`, and `07-fix-test-failures.md`, introduces the loop constants (`TEST_RUN_STEP`, `TEST_FIX_STEP`, `TEST_RESULTS_REL`, `MAX_TEST_FIX_ITERATIONS`), and extends `STEP_REQUIRED_PATTERNS` so Step 6 is validated against `.sdlc/artifacts/test-results.md`.
-- **Documentation and wrappers:** Rewrites `README.md` around the decoupled workflow (including a new "Test authoring → execution → repair" section and the updated step table), updates `bin/sdlc`, `bin/sdlc-dry`, `bin/sdlc-init`, `bin/sdlc-status`, and `templates/overrides-template.sh` to reference the new step numbers, and sweeps `02-technical-spec.md` for references to the shifted step numbers.
-- **Tests:** Adds `tests/test_fix_loop_unit_test.sh` covering the `Result:` parse contract (empty path, missing file, missing marker, PASS, FAIL, case-insensitivity, first-line-wins under a multi-section report, leading-whitespace tolerance, and unknown-value fallthrough). Extends `tests/pipeline_integration_test.sh` with two new cases pinning the manifest filter: Step 7 must be suppressed when Step 6 is planned (default dry-run), and Step 7 must appear when targeted directly via `--only`. Updates `tests/common_unit_test.sh`, `tests/config_unit_test.sh`, `tests/context_unit_test.sh`, `tests/execute_integration_test.sh`, `tests/status_unit_test.sh`, `tests/status_integration_test.sh`, `tests/validate_unit_test.sh`, and `tests/bin_wrappers_unit_test.sh` (new) to reflect the renumbering; `tests/run.sh` registers the new suites.
+- **`sdlc --help` / `-h` / `--version`:** `bin/sdlc` now intercepts these
+  flags before it ever sources the orchestrator or checks for a git repo,
+  so help is available to first-time operators and outside a repo. The
+  help screen covers USAGE, TYPICAL FLOW, PIPELINE STEPS, DURING A RUN
+  (including Ctrl+C behavior), artifacts/logs layout, and cross-references
+  `sdlc-status` / `sdlc-dry` / `sdlc-init`. `--version` prints
+  `sdlc (SDLC_HOME=<path>, rev=<sha>)` so operators can confirm which
+  checkout is on `PATH`.
+- **Config knob:** `orchestrator/config.sh` adds `HEARTBEAT_INTERVAL`
+  (default `120`, `0` disables) as an environment-overridable cadence for
+  the in-run progress log lines.
+- **In-run feedback:** `orchestrator/lib/execute.sh` prints a
+  `Follow progress: tail -f <log>` hint when a Claude step starts, spawns
+  a background heartbeat that emits `<step> still running (elapsed: Ns)`
+  every `HEARTBEAT_INTERVAL` seconds, and on successful completion extracts
+  and logs the canonical `Status:` line from the step summary.
+- **Ctrl+C handling:** `orchestrator/run-pipeline.sh` installs a SIGINT/
+  SIGTERM trap that tolerates `CURRENT_STEP_PID` being unset, walks the
+  backgrounded Claude subshell's descendant tree with `pgrep -P`
+  (macOS-safe, no GNU coreutils required), sends TERM then KILL, reaps the
+  subshell via `wait`, and exits 130. The Claude invocation is now run in
+  a backgrounded subshell so bash's `wait` is signal-interruptible without
+  changing the exit-code propagation that the retry loop depends on; the
+  subshell's own stderr is redirected into the per-step log so bash's
+  `Terminated: 15` notice does not clutter the operator's terminal.
+- **Tests:** `tests/bin_wrappers_unit_test.sh` adds three cases pinning
+  the `--help` / `-h` / `--version` contracts and confirming `--help`
+  works outside a git repo. `tests/config_unit_test.sh` adds two cases
+  pinning the `HEARTBEAT_INTERVAL` default and environment-override
+  behavior.
 
 ## How to test
-1. **Prerequisites:** clone the repo, check out `marek/sdlc-2-decouple-tests`, and ensure `bash`, `git`, and a POSIX `timeout`/`gtimeout` are on PATH. No external services are required; the integration tests stub the `claude` CLI on a per-test PATH, so no Anthropic credentials are needed.
+1. **Prerequisites:** `bash`, `git`, `pgrep`, and a POSIX `timeout`/
+   `gtimeout` on `PATH`. No external services or Anthropic credentials
+   are required — integration tests shim the `claude` CLI.
 2. **Run the full suite:** `bash tests/run.sh`.
-   Expected: 85 tests pass across 10 files (common=14, config=12, context=4, validate=9, status_unit=11, test_fix_loop=9, bin_wrappers=4, execute=6, pipeline=9, status_integration=7), exit 0. This matches `.sdlc/artifacts/test-results.md`.
-3. **Verify the `Result:` parse contract directly:** `bash tests/test_fix_loop_unit_test.sh`.
-   Expected: 9 TAP-style `ok -` lines covering PASS, FAIL, UNKNOWN, case-insensitivity, first-Result-line-wins, leading whitespace, empty path, missing file, and unknown values.
-4. **Verify the manifest filter for Step 7:** `bash tests/pipeline_integration_test.sh`.
-   Expected: 9 `ok -` lines; specifically, the default dry-run manifest includes `- \`06-run-tests.md\` (automated` but does **not** include `- \`07-fix-test-failures.md\` (automated`, while `--only 07-fix-test-failures.md` does include it.
-5. **Inspect the dry-run plan end-to-end:** from a fresh target repo, run `bash orchestrator/run-pipeline.sh --dry-run`.
-   Expected: the planned-steps section lists Steps 01, 02, 03-tests, 04-implement, 05-agents-md-check, 06-run-tests, 08-open-pr, …, 15-rebase; Step 07 is absent from the plan; manual Steps 16-merge and 17-cleanup appear only under "Manual steps skipped by default". `--include-manual` adds 16 and 17; `--only 07-fix-test-failures.md` runs Step 07 alone.
-6. **Exercise the loop contract (smoke, optional):** inside a target repo with a deliberately failing test, run `bash orchestrator/run-pipeline.sh --only 06-run-tests.md` once to produce a `Result: FAIL` report, then run the full `--dry-run` to confirm the plan still excludes Step 07 from the top-level manifest (it executes inside the loop).
+   Expected: 90 tests pass across 10 suites, exit 0. Matches
+   `.sdlc/artifacts/test-results.md`.
+3. **`--help` contract:** `bin/sdlc --help` and `bin/sdlc -h`.
+   Expected: exit 0; output contains `USAGE`, `TYPICAL FLOW`,
+   `PIPELINE STEPS`, `DURING A RUN`, and a reference to `sdlc-status`.
+4. **`--help` outside a git repo:** `cd /tmp && bin/sdlc --help`.
+   Expected: exit 0 with the same help screen — the help screen must not
+   require a git repository.
+5. **`--version` contract:** `bin/sdlc --version`.
+   Expected: exit 0; output contains `sdlc (SDLC_HOME=` followed by an
+   absolute path and a revision marker.
+6. **Heartbeat default:** `bash tests/config_unit_test.sh`.
+   Expected: `HEARTBEAT_INTERVAL` defaults to `120` and honors an
+   environment override (e.g. `HEARTBEAT_INTERVAL=30`).
+7. **In-run feedback (smoke, optional):** against a target repo, run
+   `sdlc --only 02-technical-spec.md` with `HEARTBEAT_INTERVAL=5` in the
+   environment. Expected: orchestrator log contains a
+   `Follow progress: tail -f` line, multiple
+   `02-technical-spec.md still running (elapsed: Ns)` lines at ~5s
+   cadence, and on success a single
+   `02-technical-spec.md: Status: READY` line.
+8. **Ctrl+C contract (manual, optional):** under a PTY, run `sdlc`
+   against a target repo, press Ctrl+C while a Claude step is active.
+   Expected: exit code `130`, an
+   `Interrupt received. Terminating current step and exiting...`
+   warning, and `pgrep -a claude` / `pgrep -a sleep` show no
+   orchestrator-owned descendants left behind.
 
 ## Risks and considerations
-- **PR size exception (documented):** the diff totals 40 files changed and ~1,514 total changed lines (1,153 insertions + 361 deletions), which exceeds the repository's 25-file and 800-line limits; the largest single file is `orchestrator/run-pipeline.sh` at 144 changed lines, comfortably under the 400-line per-file cap. The size is driven by the step renumbering (11 file renames, each touching cross-references in that file and in documentation/tests) plus the new `07-fix-test-failures.md` step, its orchestrator loop driver, and its test coverage. The renumbering, the loop driver, and the tests that pin their contracts are a single atomic change — splitting them would leave a window in which the orchestrator and step files disagree about numbers, or the loop would ship without regression coverage. Reviewers should treat this as one coherent decoupling change rather than unrelated work.
-- **Step-number references in external consumers:** any automation, dashboards, runbooks, or docs outside this repo that hard-code step numbers (e.g., "Step 07 = open PR", "Step 11 = ultra-review") will break after this merges. Inside-repo references were swept (README, step files, orchestrator, tests, wrappers), but external consumers were not.
-- **Behavioral change in Step 6 ↔ Step 7:** previously, a single step both ran tests and fixed failures in the same Claude invocation. With this PR, that coupling is gone: Step 6 writes a `Result: FAIL` report and exits READY, the orchestrator then invokes Step 7 to fix production code, and re-runs Step 6. If a Step 7 pass legitimately cannot fix a failure, the loop will consume up to 3 iterations before halting — runs that used to silently "self-heal" may now surface a hard failure. This is intentional (the whole point of decoupling), but it will look like a regression in runs that were masking real issues.
-- **`Result:` parse contract is load-bearing:** the orchestrator's decision to continue or exit the loop hinges on the first `Result:` line in `.sdlc/artifacts/test-results.md`. Step 6 is required by `STEP_REQUIRED_PATTERNS` to write that file, and `test_fix_loop_unit_test.sh` pins the parse shape (PASS/FAIL/UNKNOWN, case-insensitive, first line only, unknown-value safety). Any future change to Step 6's report format must preserve that first-line invariant or the loop will silently misbehave.
-- **Step 7 escape hatch:** the manifest filter deliberately keeps `--only 07-fix-test-failures.md` functional so operators can re-run just a fix pass against an existing report. This is pinned by `test_pipeline_manifest_includes_fix_step_when_targeted_directly`. Removing that escape hatch (e.g., by refusing to schedule Step 7 at all) would regress the contract documented in `07-fix-test-failures.md` about standalone invocation.
+- **Backgrounded Claude subshell changes signal plumbing, not exit-code
+  propagation:** the retry loop in `run-pipeline.sh` still observes the
+  same numeric status from the subshell as before (this is what made
+  `wait` usable inside the trap). If a future refactor reintroduces a
+  foreground `eval` for the Claude call, the SIGINT handler will regress
+  back to "Ctrl+C returns the shell but leaves descendants running" —
+  the trap is only useful because `wait` is interruptible.
+- **Process-tree walk is breadth-first via `pgrep -P`:** this is portable
+  (macOS + Linux) but depends on `pgrep` being on `PATH`. If an operator
+  ships a stripped-down base image without `procps`/`pgrep`, the trap will
+  still send TERM to the direct subshell PID and exit 130, but deeper
+  descendants (the `timeout` wrapper, the Claude CLI, any of its children)
+  could survive. This is an acceptable trade-off for the primary operator
+  platform (macOS); if we later support minimal Linux containers, the
+  trap needs a `/proc/*/task/*/children` fallback.
+- **Heartbeat is a log line, not a spinner:** by design — `sdlc` is
+  typically redirected to a log file, and a TTY spinner would corrupt
+  captured output. Operators who want interactive progress should
+  `tail -f` the per-step log using the printed hint. Setting
+  `HEARTBEAT_INTERVAL=0` in `.sdlc/overrides.sh` silences the heartbeat
+  without disabling the `tail -f` hint or the `Status:` summary line.
+- **`Status:` extraction is a regex on the step summary:** the one-line
+  summary printed on success is sourced from the canonical `Status:`
+  line in the per-step summary file. If a step ever drops that line
+  (e.g., a step author writes `Result:` instead), the orchestrator
+  will simply omit the summary line — no failure, but the operator
+  loses the at-a-glance confirmation. Every current step already prints
+  `Status: READY` as its final section, so this is a forward-compat note,
+  not a live concern.
+- **Terminal cleanliness relies on redirecting the subshell's stderr into
+  the per-step log:** if a future change reinstates the subshell's stderr
+  to the terminal (e.g., for debugging), the operator will see bash's
+  `Terminated: 15` notice on Ctrl+C again. The current redirection is
+  intentional and load-bearing for a clean interrupt UX.
