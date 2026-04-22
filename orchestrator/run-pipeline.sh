@@ -10,6 +10,94 @@ source "$SDLC_HOME/orchestrator/lib/execute.sh"
 source "$SDLC_HOME/orchestrator/lib/validate.sh"
 source "$SDLC_HOME/orchestrator/lib/test_fix_loop.sh"
 
+# Globals the interrupt handler reads. execute.sh sets CURRENT_STEP_PID to the
+# PID of the backgrounded Claude subshell; the heartbeat loop below sets
+# STEP_HEARTBEAT_PID. Both stay empty when no step is active.
+CURRENT_STEP_PID=""
+STEP_HEARTBEAT_PID=""
+
+stop_heartbeat() {
+  if [[ -n "$STEP_HEARTBEAT_PID" ]] && kill -0 "$STEP_HEARTBEAT_PID" 2>/dev/null; then
+    kill -TERM "$STEP_HEARTBEAT_PID" 2>/dev/null || true
+    wait "$STEP_HEARTBEAT_PID" 2>/dev/null || true
+  fi
+  STEP_HEARTBEAT_PID=""
+}
+
+# Signal a process and every descendant, walking the tree so grandchildren
+# (the tee children, the Claude CLI, and anything it spawned) don't linger.
+# Job control is off in a non-interactive shell, so the backgrounded subshell
+# inherits our pgid — `kill -<signal> -PGID` can't single it out. pgrep -P is
+# portable across macOS and Linux and makes no assumptions about pgid layout.
+signal_process_tree() {
+  local signal="$1"
+  local root="$2"
+  local child
+  for child in $(pgrep -P "$root" 2>/dev/null || true); do
+    signal_process_tree "$signal" "$child"
+  done
+  kill "-$signal" "$root" 2>/dev/null || true
+}
+
+terminate_current_step() {
+  local pid="$CURRENT_STEP_PID"
+  [[ -z "$pid" ]] && return 0
+  if kill -0 "$pid" 2>/dev/null; then
+    signal_process_tree TERM "$pid"
+    # Give the subshell up to 2 seconds (20 * 100ms) to drain its tee pipes
+    # before escalating to KILL — long enough for the trailing bytes of
+    # Claude's response to flush into the summary file so the operator does
+    # not lose the partial output on Ctrl+C, short enough that a wedged
+    # child does not stall the exit perceptibly.
+    local waited=0
+    while [[ "$waited" -lt 20 ]] && kill -0 "$pid" 2>/dev/null; do
+      sleep 0.1
+      waited=$((waited + 1))
+    done
+    if kill -0 "$pid" 2>/dev/null; then
+      signal_process_tree KILL "$pid"
+    fi
+  fi
+  wait "$pid" 2>/dev/null || true
+  CURRENT_STEP_PID=""
+}
+
+handle_interrupt() {
+  # Drop a newline so the log line starts on its own line after ^C echo.
+  printf '\n' >&2
+  sdlc_log "WARN" "Interrupt received. Terminating current step and exiting..."
+  stop_heartbeat
+  terminate_current_step
+  # The trap catches INT and TERM — log a signal-agnostic phrase so a SIGTERM
+  # reader doesn't interpret "(SIGINT)" as the actual signal that fired.
+  sdlc_log "WARN" "Pipeline halted by user (signal)."
+  # 130 = 128 + SIGINT(2), the conventional shell exit code for Ctrl+C; we
+  # use the same code on SIGTERM so operators have one reliable post-mortem
+  # signal to grep for.
+  exit 130
+}
+
+trap handle_interrupt INT TERM
+
+emit_heartbeat_loop() {
+  local label="$1"
+  local interval="$2"
+  local start=$SECONDS
+  local sleep_pid=""
+  # `wait` (unlike the raw `sleep` builtin's child) is interruptible by signals
+  # delivered to this subshell. The TERM trap kills the sleep grandchild so it
+  # doesn't linger, then exits cleanly.
+  trap 'kill "$sleep_pid" 2>/dev/null; exit 0' TERM INT
+  while :; do
+    sleep "$interval" &
+    sleep_pid=$!
+    wait "$sleep_pid" 2>/dev/null || true
+    sleep_pid=""
+    local elapsed=$((SECONDS - start))
+    sdlc_log "INFO" "$label still running (elapsed: ${elapsed}s)"
+  done
+}
+
 START_FROM=""
 ONLY_STEP=""
 DRY_RUN=false
@@ -259,6 +347,12 @@ execute_step_with_retries() {
     local attempt_summary="$LOG_DIR/${base_name}_attempt${attempt}_summary.md"
 
     sdlc_log "INFO" "Attempt $attempt/$max_retries"
+
+    if [[ "$HEARTBEAT_INTERVAL" -gt 0 ]]; then
+      emit_heartbeat_loop "$label (attempt $attempt)" "$HEARTBEAT_INTERVAL" &
+      STEP_HEARTBEAT_PID=$!
+    fi
+
     set +e
     run_claude_step \
       "$step_file" \
@@ -271,6 +365,8 @@ execute_step_with_retries() {
     local exit_code=$?
     set -e
 
+    stop_heartbeat
+
     if [[ "$exit_code" -eq 124 ]]; then
       sdlc_log "WARN" "Step $label timed out after ${timeout_value}s."
       notify "SDLC $REPO_NAME: $label timed out"
@@ -280,6 +376,7 @@ execute_step_with_retries() {
       cp "$attempt_log" "$LOG_DIR/${base_name}.log"
       cp "$attempt_summary" "$LOG_DIR/${base_name}_summary.md"
       update_context "$label" "$LOG_DIR/${base_name}_summary.md" "$CONTEXT_FILE"
+      emit_step_summary_excerpt "$label" "$LOG_DIR/${base_name}_summary.md"
       return 0
     else
       sdlc_log "WARN" "Validation failed for $label."
@@ -289,6 +386,25 @@ execute_step_with_retries() {
   done
 
   return 1
+}
+
+# Print a short, terminal-friendly excerpt of the step's final response so the
+# operator sees what the step accomplished without hunting through logs. Looks
+# for the canonical Status line emitted by the "Final Response Format" in
+# execute.sh: step files produce `5. Status: READY|BLOCKED` as the fifth and
+# final numbered field. validate.sh parses the same two forms (`^5.\s*Status:`
+# and bare `^Status:`), so this regex stays in sync with that contract — if the
+# final-response template is ever renumbered, both places must be updated.
+emit_step_summary_excerpt() {
+  local label="$1"
+  local summary_path="$2"
+  [[ ! -s "$summary_path" ]] && return 0
+
+  local status_line
+  status_line=$(grep -E '^[[:space:]]*(5\.[[:space:]]*)?Status:' "$summary_path" | tail -n 1 || true)
+  if [[ -n "$status_line" ]]; then
+    sdlc_log "INFO" "$label: $(printf '%s' "$status_line" | sed -E 's/^[[:space:]]*//')"
+  fi
 }
 
 # Drive the run-tests / fix-test-failures loop. Step 6 always runs first so the

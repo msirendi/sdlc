@@ -4,3 +4,6 @@
 
 # Playwright MCP logs
 .playwright-mcp/*.log
+
+# Claude Code harness local state
+.claude/
