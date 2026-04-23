@@ -20,6 +20,10 @@
 # CLAUDE_MODEL="claude-opus-4-7"
 # CLAUDE_EFFORT="xhigh"
 
+# Example: adjust how often liveness/progress heartbeats print while Claude is
+# still working. Set to 0 to disable.
+# HEARTBEAT_INTERVAL=30
+
 # Example: tighten the permission mode for a specific step.
 # STEP_PERMISSION_MODES+=("10-semantic-diff-report.md=plan")
 
