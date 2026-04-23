@@ -1,116 +1,138 @@
-Fixes #SDLC-3
+Fixes #SDLC-4
 
 ## Summary
-Closes three operator-facing ergonomics gaps in the `sdlc` command that
-together made a pipeline run feel opaque and unsafe to interrupt: there
-was no first-class help screen, the terminal went silent for minutes at
-a time while a Claude step ran, and Ctrl+C did not reliably exit — it
-would usually leave `claude` / `sleep` / `timeout` / `tee` descendants
-running in the background while the operator's shell returned. This PR
-adds a user-focused `sdlc --help` (plus `-h` and `--version`) that works
-outside a git repo, prints a `tail -f <log>` follow-along hint and
-periodic "still running (elapsed: Ns)" heartbeats during each step, emits
-a one-line `Status:` excerpt on successful step completion, and installs
-a SIGINT/SIGTERM trap that walks the Claude subshell's process tree via
-`pgrep -P`, TERM/KILL-escalates every descendant, and exits 130.
+Makes `sdlc` show visible progress while a Claude step is in flight, and
+removes the false "progress" signal that pre-seeded canonical artifacts used
+to provide. Before this change, targeted or follow-up runs of
+`02-technical-spec.md` and `08-open-pr.md` looked idle for minutes at a time
+— the root cause is that `claude --print --output-format text` only emits
+its final response when the process exits, and those two steps already had
+the canonical artifact on disk from prior runs, so neither stdout nor file
+presence gave an honest "is something happening?" signal. The orchestrator
+now announces tracked canonical outputs at attempt start, labels each file
+as `missing`, `present at attempt start`, `unchanged since attempt start`, or
+`updated Ns ago` in every heartbeat, and the default heartbeat cadence drops
+from 120s to 30s so `--print` runs stay visibly alive without a second
+terminal.
 
 ## Changes
-- **`sdlc --help` / `-h` / `--version`:** `bin/sdlc` now intercepts these
-  flags before it ever sources the orchestrator or checks for a git repo,
-  so help is available to first-time operators and outside a repo. The
-  help screen covers USAGE, TYPICAL FLOW, PIPELINE STEPS, DURING A RUN
-  (including Ctrl+C behavior), artifacts/logs layout, and cross-references
-  `sdlc-status` / `sdlc-dry` / `sdlc-init`. `--version` prints
-  `sdlc (SDLC_HOME=<path>, rev=<sha>)` so operators can confirm which
-  checkout is on `PATH`.
-- **Config knob:** `orchestrator/config.sh` adds `HEARTBEAT_INTERVAL`
-  (default `120`, `0` disables) as an environment-overridable cadence for
-  the in-run progress log lines.
-- **In-run feedback:** `orchestrator/lib/execute.sh` prints a
-  `Follow progress: tail -f <log>` hint when a Claude step starts, spawns
-  a background heartbeat that emits `<step> still running (elapsed: Ns)`
-  every `HEARTBEAT_INTERVAL` seconds, and on successful completion extracts
-  and logs the canonical `Status:` line from the step summary.
-- **Ctrl+C handling:** `orchestrator/run-pipeline.sh` installs a SIGINT/
-  SIGTERM trap that tolerates `CURRENT_STEP_PID` being unset, walks the
-  backgrounded Claude subshell's descendant tree with `pgrep -P`
-  (macOS-safe, no GNU coreutils required), sends TERM then KILL, reaps the
-  subshell via `wait`, and exits 130. The Claude invocation is now run in
-  a backgrounded subshell so bash's `wait` is signal-interruptible without
-  changing the exit-code propagation that the retry loop depends on; the
-  subshell's own stderr is redirected into the per-step log so bash's
-  `Terminated: 15` notice does not clutter the operator's terminal.
-- **Tests:** `tests/bin_wrappers_unit_test.sh` adds three cases pinning
-  the `--help` / `-h` / `--version` contracts and confirming `--help`
-  works outside a git repo. `tests/config_unit_test.sh` adds two cases
-  pinning the `HEARTBEAT_INTERVAL` default and environment-override
-  behavior.
+- **Config (`orchestrator/config.sh`):** `HEARTBEAT_INTERVAL` default drops
+  from `120` to `30`; the existing non-numeric clamp now resets malformed
+  overrides to `30` as well, so an empty `HEARTBEAT_INTERVAL=` in
+  `overrides.sh` cannot crash the `[[ -gt 0 ]]` guard downstream.
+  `HEARTBEAT_INTERVAL=0` still disables heartbeats.
+- **Portable filesystem helpers (`orchestrator/lib/common.sh`):** adds
+  `sdlc_file_size_bytes` (portable `wc -c`, returns `0` for missing paths)
+  and `sdlc_file_mtime_epoch` (BSD `stat -f %m` then GNU `stat -c %Y`, with
+  a `0` fallback), so the progress renderer does not depend on GNU coreutils
+  on macOS.
+- **Tracked-output progress (`orchestrator/run-pipeline.sh`):** adds
+  `describe_tracked_outputs_at_start` and `render_tracked_output_progress`,
+  both driven by the existing `STEP_REQUIRED_PATTERNS` map.
+  `execute_step_with_retries` now captures an `attempt_start_epoch` before
+  the Claude subshell launches, logs which outputs it is tracking and
+  whether they were already present, and passes the epoch into
+  `emit_heartbeat_loop`. Each heartbeat tick appends a `; <pattern>
+  unchanged since attempt start | updated Ns ago (...)` suffix to the
+  existing `still running (elapsed: Ns; repo <state>)` line; steps without
+  tracked patterns emit the unchanged pre-existing line.
+- **`--print` contract is explicit (`orchestrator/lib/execute.sh`):** the
+  step header now includes a single INFO line stating that Claude stdout is
+  final-response-only in `--print` mode and that heartbeat / tracked-output
+  lines are the live progress signal until the step exits. Surfacing this at
+  the moment operators hit confusion (not just in the README) is a direct
+  fix for the "why has this been silent for minutes?" misread.
+- **Docs & discoverability (`README.md`, `bin/sdlc`,
+  `templates/overrides-template.sh`):** README explains the 30s default and
+  that tracked artifact paths appear in heartbeats. `sdlc --help`'s
+  `DURING A RUN` section now says Claude's response prints on exit and that
+  the start line includes tracked outputs. The overrides template adds a
+  commented-out `HEARTBEAT_INTERVAL=30` example so the knob is
+  discoverable.
+- **Tests (`tests/common_unit_test.sh`, `tests/config_unit_test.sh`,
+  `tests/sdlc_signals_integration_test.sh`):** pins the new helpers
+  (`0` for missing path, positive-integer mtime for a created file), pins
+  the 30s `HEARTBEAT_INTERVAL` default, and adds
+  `test_tracked_output_progress_reports_seeded_artifact_then_update` which
+  drives the real `sdlc` entrypoint against a fake `claude` shim that
+  seeds, then rewrites, `.sdlc/artifacts/technical-spec.md`, asserting the
+  full `present at attempt start` → `unchanged since attempt start` →
+  `updated` progression.
 
 ## How to test
-1. **Prerequisites:** `bash`, `git`, `pgrep`, and a POSIX `timeout`/
-   `gtimeout` on `PATH`. No external services or Anthropic credentials
-   are required — integration tests shim the `claude` CLI.
+1. **Prerequisites:** `bash`, `git`, and either BSD or GNU `stat` on `PATH`
+   (both macOS and Linux tool dialects are covered). No external services
+   or Anthropic credentials are required — the integration test shims the
+   `claude` CLI.
 2. **Run the full suite:** `bash tests/run.sh`.
-   Expected: 90 tests pass across 10 suites, exit 0. Matches
+   Expected: 96 tests pass across 11 suites, exit 0. Matches
    `.sdlc/artifacts/test-results.md`.
-3. **`--help` contract:** `bin/sdlc --help` and `bin/sdlc -h`.
-   Expected: exit 0; output contains `USAGE`, `TYPICAL FLOW`,
-   `PIPELINE STEPS`, `DURING A RUN`, and a reference to `sdlc-status`.
-4. **`--help` outside a git repo:** `cd /tmp && bin/sdlc --help`.
-   Expected: exit 0 with the same help screen — the help screen must not
-   require a git repository.
-5. **`--version` contract:** `bin/sdlc --version`.
-   Expected: exit 0; output contains `sdlc (SDLC_HOME=` followed by an
-   absolute path and a revision marker.
-6. **Heartbeat default:** `bash tests/config_unit_test.sh`.
-   Expected: `HEARTBEAT_INTERVAL` defaults to `120` and honors an
-   environment override (e.g. `HEARTBEAT_INTERVAL=30`).
-7. **In-run feedback (smoke, optional):** against a target repo, run
-   `sdlc --only 02-technical-spec.md` with `HEARTBEAT_INTERVAL=5` in the
-   environment. Expected: orchestrator log contains a
-   `Follow progress: tail -f` line, multiple
-   `02-technical-spec.md still running (elapsed: Ns)` lines at ~5s
-   cadence, and on success a single
-   `02-technical-spec.md: Status: READY` line.
-8. **Ctrl+C contract (manual, optional):** under a PTY, run `sdlc`
-   against a target repo, press Ctrl+C while a Claude step is active.
-   Expected: exit code `130`, an
-   `Interrupt received. Terminating current step and exiting...`
-   warning, and `pgrep -a claude` / `pgrep -a sleep` show no
-   orchestrator-owned descendants left behind.
+3. **Heartbeat default:** `bash tests/config_unit_test.sh`.
+   Expected: `HEARTBEAT_INTERVAL` now defaults to `30` and an environment
+   preset still wins.
+4. **Tracked-output progress (integration):**
+   `bash tests/sdlc_signals_integration_test.sh`.
+   Expected: the new
+   `test_tracked_output_progress_reports_seeded_artifact_then_update` case
+   passes, asserting all four progress-line shapes (`Tracking outputs for
+   02-technical-spec.md`, `present at attempt start`, `unchanged since
+   attempt start`, `updated`).
+5. **Portable filesystem helpers (unit):**
+   `bash tests/common_unit_test.sh`.
+   Expected: `sdlc_file_size_bytes` returns `0` for a missing path and the
+   exact byte count for a known file; `sdlc_file_mtime_epoch` returns a
+   positive integer for an existing file. Works on both macOS (BSD `stat`)
+   and Linux (GNU `stat`).
+6. **Smoke (optional, against a target repo):** run
+   `sdlc --only 02-technical-spec.md` with a pre-existing
+   `.sdlc/artifacts/technical-spec.md` and `HEARTBEAT_INTERVAL=5` in the
+   environment. Expected: log contains `Tracking outputs for
+   02-technical-spec.md: .sdlc/artifacts/technical-spec.md present at
+   attempt start (...)`, then multiple
+   `... still running (elapsed: Ns; repo ...; .sdlc/artifacts/technical-spec.md unchanged since attempt start ...)`
+   lines, and after Claude rewrites the file a later heartbeat reporting
+   `.sdlc/artifacts/technical-spec.md updated Ns ago (...)`.
+7. **Disable switch still works:** `HEARTBEAT_INTERVAL=0 sdlc --only
+   01-branch-setup.md`. Expected: no heartbeat lines and no tracked-output
+   mid-run lines; the step still runs to completion.
 
 ## Risks and considerations
-- **Backgrounded Claude subshell changes signal plumbing, not exit-code
-  propagation:** the retry loop in `run-pipeline.sh` still observes the
-  same numeric status from the subshell as before (this is what made
-  `wait` usable inside the trap). If a future refactor reintroduces a
-  foreground `eval` for the Claude call, the SIGINT handler will regress
-  back to "Ctrl+C returns the shell but leaves descendants running" —
-  the trap is only useful because `wait` is interruptible.
-- **Process-tree walk is breadth-first via `pgrep -P`:** this is portable
-  (macOS + Linux) but depends on `pgrep` being on `PATH`. If an operator
-  ships a stripped-down base image without `procps`/`pgrep`, the trap will
-  still send TERM to the direct subshell PID and exit 130, but deeper
-  descendants (the `timeout` wrapper, the Claude CLI, any of its children)
-  could survive. This is an acceptable trade-off for the primary operator
-  platform (macOS); if we later support minimal Linux containers, the
-  trap needs a `/proc/*/task/*/children` fallback.
-- **Heartbeat is a log line, not a spinner:** by design — `sdlc` is
-  typically redirected to a log file, and a TTY spinner would corrupt
-  captured output. Operators who want interactive progress should
-  `tail -f` the per-step log using the printed hint. Setting
-  `HEARTBEAT_INTERVAL=0` in `.sdlc/overrides.sh` silences the heartbeat
-  without disabling the `tail -f` hint or the `Status:` summary line.
-- **`Status:` extraction is a regex on the step summary:** the one-line
-  summary printed on success is sourced from the canonical `Status:`
-  line in the per-step summary file. If a step ever drops that line
-  (e.g., a step author writes `Result:` instead), the orchestrator
-  will simply omit the summary line — no failure, but the operator
-  loses the at-a-glance confirmation. Every current step already prints
-  `Status: READY` as its final section, so this is a forward-compat note,
-  not a live concern.
-- **Terminal cleanliness relies on redirecting the subshell's stderr into
-  the per-step log:** if a future change reinstates the subshell's stderr
-  to the terminal (e.g., for debugging), the operator will see bash's
-  `Terminated: 15` notice on Ctrl+C again. The current redirection is
-  intentional and load-bearing for a clean interrupt UX.
+- **Progress signal is mtime-vs-attempt-start, not content hashing.** If a
+  step rewrites the tracked artifact with byte-identical content, the
+  heartbeat will correctly report `updated` because mtime changed — but a
+  `touch`-style no-op write would also flip the label. This is an accepted
+  trade-off: the step contract is "Claude rewrites the file when it has a
+  new spec/PR body," and a more robust hash-based signal would add per-tick
+  I/O for no real-world gain. If a future step starts `touch`-ing
+  pre-existing artifacts for unrelated reasons, the label will lie.
+- **`HEARTBEAT_INTERVAL` default is now 30s (was 120s).** Logs for
+  multi-hour runs will be four times as chatty by default. Operators who
+  redirect `sdlc` to a file and care about log size can set
+  `HEARTBEAT_INTERVAL=120` (or higher) in `.sdlc/overrides.sh` to restore
+  the prior cadence; the knob is now explicitly surfaced in the overrides
+  template. `HEARTBEAT_INTERVAL=0` is still the documented disable switch
+  and is preserved by the non-numeric clamp (only empty/non-integer values
+  are rewritten).
+- **`stat` portability fallback is a silent degradation.** On a stripped
+  container without any `stat` at all, `sdlc_file_mtime_epoch` returns `0`
+  and every tick reports `updated Ns ago` (since `0 <= attempt_start_epoch`
+  is never true once `date +%s` has advanced). The operator loses the
+  `unchanged` distinction but the heartbeat still renders filenames and
+  sizes. `wc -c` is POSIX and does not share this risk.
+- **Progress renderer reuses `STEP_REQUIRED_PATTERNS`**, so the two steps
+  the ticket calls out (`02-technical-spec.md`, `08-open-pr.md`) are
+  covered, plus any other step that declares a canonical output (e.g.
+  `05-commit.md`, `09-semantic-review.md`,
+  `10-semantic-diff-report.md`). Steps with no declared pattern stay on
+  the pre-existing generic heartbeat line — no new noise there.
+- **Not yet addressed:** streaming Claude's intermediate reasoning/tool-use
+  events. That would require moving off `claude --print --output-format
+  text` to `stream-json`, which cascades changes into steps 9 and 10
+  (which currently read the summary file as prose) and is explicitly out
+  of scope for this ticket. The heartbeat + tracked-output pair is the
+  closest non-streaming analogue available under the current `--print`
+  contract.
+- **Reviewer scrutiny requested on:** (a) the `emit_heartbeat_loop`
+  signature change — the two callers are updated in lockstep, but any
+  downstream override that wraps it will need to be updated; (b) whether
+  30s is the right default for teams that redirect `sdlc` to CI logs.

@@ -23,14 +23,15 @@ DEFAULT_TIMEOUT="${DEFAULT_TIMEOUT:-1800}"
 DEFAULT_RETRIES="${DEFAULT_RETRIES:-2}"
 INTER_STEP_DELAY="${INTER_STEP_DELAY:-5}"
 DEFAULT_INCLUDE_MANUAL="${DEFAULT_INCLUDE_MANUAL:-false}"
-# Emit "still running (elapsed Xs)" heartbeats while a step's Claude call is
-# in flight — prevents the terminal from going silent for minutes at a time.
+# Emit "still running" heartbeats while a step's Claude call is in flight.
+# 30s keeps long-running `--print` invocations visibly alive even when Claude
+# does not emit stdout until the final response.
 # Set to 0 to disable. Clamped to the default when the override is empty or
 # non-numeric so the `[[ -gt 0 ]]` guard in run-pipeline.sh can't crash the
 # pipeline on a stray `HEARTBEAT_INTERVAL=""` in overrides.sh.
-HEARTBEAT_INTERVAL="${HEARTBEAT_INTERVAL:-120}"
+HEARTBEAT_INTERVAL="${HEARTBEAT_INTERVAL:-30}"
 if [[ ! "$HEARTBEAT_INTERVAL" =~ ^[0-9]+$ ]]; then
-  HEARTBEAT_INTERVAL=120
+  HEARTBEAT_INTERVAL=30
 fi
 SKIP_STEPS=()
 

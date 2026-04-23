@@ -1,16 +1,18 @@
 # Test Results
 
 Result: PASS
-Run at: 2026-04-22T15:01:22Z
+Run at: 2026-04-23T01:42:24Z
 Command: bash tests/run.sh
 
 ## Summary
-- Total: 93
-- Passed: 93
+- Total: 96
+- Passed: 96
 - Failed: 0
 - Skipped: 0
 
 ## Failures
+
+## Pre-existing failures on main
 
 ## Notes
 - Executed the canonical entry point `tests/run.sh`, which runs all unit and
@@ -20,28 +22,23 @@ Command: bash tests/run.sh
   `bin_wrappers_unit_test.sh`, `execute_integration_test.sh`,
   `pipeline_integration_test.sh`, `sdlc_signals_integration_test.sh`, and
   `status_integration_test.sh`.
-- Per-suite pass counts: common=14, config=14, context=4, validate=9,
-  status_unit=11, test_fix_loop=9, bin_wrappers=7, execute=6, pipeline=9,
-  signals=3, status_integration=7 (sum = 93).
-- Step 11 added coverage for two previously-uncovered contracts from the
-  semantic review:
-  `test_sdlc_terminate_signal_exits_130_and_kills_claude_descendants` pins
-  the SIGINT/SIGTERM trap + process-tree walk (exit 130, no orphan
-  descendants); `test_heartbeat_loop_emits_still_running_line_during_step`
-  and `test_heartbeat_interval_zero_suppresses_heartbeat_lines` pin the
-  heartbeat loop's log-line format and `HEARTBEAT_INTERVAL=0` disable path.
-  An additional `PIPELINE STEPS` assertion was added to
-  `test_sdlc_help_prints_user_facing_overview` to cover the fifth AC-named
-  help section.
-- Step 12 applied five ultra-review fixes (stderr duplication in execute.sh,
-  `--version` git-worktree detection, literal `$SDLC_HOME` in `--help`
-  SEE ALSO, signal-name accuracy in `handle_interrupt`'s post-exit WARN,
-  and duplicate trap firing inside the backgrounded Claude subshell). The
-  existing test suite still reports 93/93 green against the updated code,
-  with no new tests required: the three existing signals integration tests
-  cover the changed interrupt paths, and the existing bin-wrapper tests
-  cover the `--help` / `--version` contract.
+- Per-suite pass counts for this run: common=16, config=14, context=4,
+  validate=9, status_unit=11, test_fix_loop=9, bin_wrappers=7, execute=6,
+  pipeline=9, signals=4, status_integration=7 (sum = 96).
+- SDLC-4 coverage confirmed green:
+  `test_tracked_output_progress_reports_seeded_artifact_then_update` in
+  `sdlc_signals_integration_test.sh` pins the new tracked-output heartbeat
+  contract (seeded artifact reported as `unchanged since attempt start`, then
+  as `updated` after rewrite), and
+  `test_config_heartbeat_interval_has_sensible_default` /
+  `test_config_heartbeat_interval_honors_environment_override` in
+  `config_unit_test.sh` pin the shortened default heartbeat cadence and its
+  env override path.
+- Two new `common` unit tests
+  (`test_sdlc_file_helpers_report_size_and_mtime_for_existing_file`,
+  `test_sdlc_file_size_bytes_returns_zero_for_missing_path`) exercise the
+  filesystem helpers that the tracked-output heartbeat relies on.
 - The repository has no separate e2e command; the `*_integration_test.sh`
   suites exercise orchestrator flows end-to-end against fixture repos and
   are already included in `tests/run.sh`.
-- No warnings or deprecation notices were emitted by any suite.
+- No tests were skipped and no warnings or deprecation notices were emitted.

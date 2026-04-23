@@ -58,9 +58,11 @@ PIPELINE STEPS
     is planned. It appears as a top-level step only when targeted explicitly.
 
 DURING A RUN
-  Each step streams stdout to the terminal and mirrors it to a per-step log.
+  Claude's final step response is printed when the step exits. While it is
+  running, the orchestrator emits heartbeat/progress lines and mirrors the
+  step log to a per-step file.
   Follow progress in another terminal with:   tail -f <step log path>
-  The orchestrator prints the log path when it starts a step.
+  The orchestrator prints the log path and tracked outputs when it starts a step.
   Press Ctrl+C to stop: the current step is terminated and the pipeline exits.
 
 ARTIFACTS & LOGS  (all under the target repo)

@@ -92,6 +92,45 @@ printf "5. Status: READY\n"' "hb-off-target"
     "Did not expect heartbeat lines when HEARTBEAT_INTERVAL=0. Output: $output"
 }
 
+test_tracked_output_progress_reports_seeded_artifact_then_update() {
+  if ! command -v git >/dev/null 2>&1; then
+    return 0
+  fi
+
+  setup_signal_fixture '#!/usr/bin/env bash
+sleep 2
+printf "# Updated spec\n" > ".sdlc/artifacts/technical-spec.md"
+sleep 2
+printf "1. Accomplished\n- Updated spec.\n5. Status: READY\n"' "tracked-output-target"
+
+  mkdir -p "$TARGET_REPO/.sdlc/artifacts"
+  printf '# Seed spec\n' > "$TARGET_REPO/.sdlc/artifacts/technical-spec.md"
+  git -C "$TARGET_REPO" -c user.email=test@example.com -c user.name=Test \
+    add .sdlc/task.md .sdlc/artifacts/technical-spec.md >/dev/null
+  git -C "$TARGET_REPO" -c user.email=test@example.com -c user.name=Test \
+    commit -q -m "seed sdlc artifacts"
+
+  local output
+  local status=0
+  output=$(env -i \
+    HOME="$TEST_TEMP_DIR/home" \
+    PATH="$BIN_DIR:$SHIM_DIR:/usr/bin:/bin" \
+    HEARTBEAT_INTERVAL=1 \
+    INTER_STEP_DELAY=0 \
+    sdlc "$TARGET_REPO" --only 02-technical-spec.md 2>&1) || status=$?
+
+  assert_exit_code 0 "$status" \
+    "Expected the targeted technical-spec step to succeed under the artifact-update shim. Output: $output"
+  assert_contains "$output" "Tracking outputs for 02-technical-spec.md" \
+    "Expected the runner to announce tracked outputs for Step 02. Output: $output"
+  assert_contains "$output" ".sdlc/artifacts/technical-spec.md present at attempt start" \
+    "Expected the seeded technical-spec artifact to be reported as pre-existing. Output: $output"
+  assert_contains "$output" ".sdlc/artifacts/technical-spec.md unchanged since attempt start" \
+    "Expected a heartbeat to explain that the seeded artifact had not been rewritten yet. Output: $output"
+  assert_contains "$output" ".sdlc/artifacts/technical-spec.md updated" \
+    "Expected a later heartbeat to report that the tracked artifact had changed. Output: $output"
+}
+
 test_sdlc_terminate_signal_exits_130_and_kills_claude_descendants() {
   # NOTE ON SIGNAL CHOICE: the orchestrator traps `INT TERM` with the same
   # `handle_interrupt` function — terminate the step, stop heartbeats, exit

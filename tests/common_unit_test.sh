@@ -149,6 +149,27 @@ test_sdlc_git_has_non_log_changes_detects_artifact_changes() {
   fi
 }
 
+test_sdlc_file_size_bytes_returns_zero_for_missing_path() {
+  assert_equals "0" "$(sdlc_file_size_bytes "/definitely/missing/path")" \
+    "Expected sdlc_file_size_bytes to treat missing files as 0 bytes."
+}
+
+test_sdlc_file_helpers_report_size_and_mtime_for_existing_file() {
+  local sample_file=""
+  use_temp_dir
+  sample_file="$TEST_TEMP_DIR/sample.txt"
+  printf 'hello\n' > "$sample_file"
+
+  assert_equals "6" "$(sdlc_file_size_bytes "$sample_file")" \
+    "Expected sdlc_file_size_bytes to report the file's byte count."
+
+  local mtime
+  mtime=$(sdlc_file_mtime_epoch "$sample_file")
+  if [[ ! "$mtime" =~ ^[0-9]+$ ]] || [[ "$mtime" -le 0 ]]; then
+    fail "Expected sdlc_file_mtime_epoch to return a positive integer mtime; got [$mtime]."
+  fi
+}
+
 test_sdlc_run_with_timeout_returns_command_exit_code_when_no_timeout() {
   set +e
   sdlc_run_with_timeout "" bash -c 'exit 7'

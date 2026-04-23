@@ -120,8 +120,8 @@ test_config_heartbeat_interval_has_sensible_default() {
   # Heartbeat cadence is user-facing (it controls how often "still running"
   # messages print during long Claude calls). Pin the default so overrides.sh
   # authors can reason about it, and confirm it stays enabled by default.
-  assert_equals "120" "$HEARTBEAT_INTERVAL" \
-    "Expected HEARTBEAT_INTERVAL to default to 120s so long steps aren't silent."
+  assert_equals "30" "$HEARTBEAT_INTERVAL" \
+    "Expected HEARTBEAT_INTERVAL to default to 30s so long --print steps stay visibly alive."
 }
 
 test_config_heartbeat_interval_honors_environment_override() {

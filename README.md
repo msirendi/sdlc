@@ -124,11 +124,16 @@ The wrappers resolve symlinks, so `SDLC_HOME` still points at the real repo.
 
 ## Default model configuration
 
-The orchestrator invokes Claude Code in headless mode (`claude -p`) with:
+The orchestrator invokes Claude Code in headless mode (`claude --print`) with:
 
 - Model: `claude-opus-4-7`
 - Effort: `xhigh`
 - Permission mode: `acceptEdits`
+
+Because `--print` emits the final step response on stdout when the Claude
+process exits, the orchestrator also emits heartbeat/progress lines during long
+steps. By default those liveness updates print every 30 seconds and include any
+tracked artifact paths for the current step.
 
 Override any of these per-repo in `.sdlc/overrides.sh` (see [`templates/overrides-template.sh`](templates/overrides-template.sh)).
 

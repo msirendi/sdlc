@@ -82,6 +82,9 @@ trap handle_interrupt INT TERM
 emit_heartbeat_loop() {
   local label="$1"
   local interval="$2"
+  local step_name="$3"
+  local repo_root="$4"
+  local attempt_start_epoch="$5"
   local start=$SECONDS
   local sleep_pid=""
   # `wait` (unlike the raw `sleep` builtin's child) is interruptible by signals
@@ -94,8 +97,115 @@ emit_heartbeat_loop() {
     wait "$sleep_pid" 2>/dev/null || true
     sleep_pid=""
     local elapsed=$((SECONDS - start))
-    sdlc_log "INFO" "$label still running (elapsed: ${elapsed}s)"
+    local progress_note=""
+    local repo_note="repo clean"
+    progress_note=$(render_tracked_output_progress "$step_name" "$repo_root" "$attempt_start_epoch")
+    if sdlc_git_has_non_log_changes "$repo_root"; then
+      repo_note="repo has non-log changes"
+    fi
+    if [[ -n "$progress_note" ]]; then
+      sdlc_log "INFO" "$label still running (elapsed: ${elapsed}s; $repo_note; $progress_note)"
+    else
+      sdlc_log "INFO" "$label still running (elapsed: ${elapsed}s; $repo_note)"
+    fi
   done
+}
+
+describe_tracked_outputs_at_start() {
+  local step_name="$1"
+  local repo_root="$2"
+  local required_patterns=""
+  required_patterns=$(sdlc_lookup_kv STEP_REQUIRED_PATTERNS "$step_name" "")
+  [[ -n "$required_patterns" ]] || return 0
+
+  local description=""
+  local pattern=""
+  while IFS= read -r pattern; do
+    [[ -n "$pattern" ]] || continue
+
+    local matches=()
+    local match=""
+    while IFS= read -r match; do
+      [[ -n "$match" ]] && matches+=("$match")
+    done < <(compgen -G "$repo_root/$pattern" || true)
+
+    local fragment=""
+    if [[ ${#matches[@]} -eq 0 ]]; then
+      fragment="$pattern missing at attempt start"
+    else
+      local total_bytes=0
+      for match in "${matches[@]}"; do
+        total_bytes=$((total_bytes + $(sdlc_file_size_bytes "$match")))
+      done
+      fragment="$pattern present at attempt start (${#matches[@]} file(s), ${total_bytes}B)"
+    fi
+
+    if [[ -n "$description" ]]; then
+      description="$description; "
+    fi
+    description="$description$fragment"
+  done <<< "${required_patterns//|/$'\n'}"
+
+  if [[ -n "$description" ]]; then
+    printf '%s\n' "$description"
+  fi
+}
+
+render_tracked_output_progress() {
+  local step_name="$1"
+  local repo_root="$2"
+  local attempt_start_epoch="$3"
+  local required_patterns=""
+  required_patterns=$(sdlc_lookup_kv STEP_REQUIRED_PATTERNS "$step_name" "")
+  [[ -n "$required_patterns" ]] || return 0
+
+  local now_epoch
+  now_epoch=$(date +%s)
+
+  local description=""
+  local pattern=""
+  while IFS= read -r pattern; do
+    [[ -n "$pattern" ]] || continue
+
+    local matches=()
+    local match=""
+    while IFS= read -r match; do
+      [[ -n "$match" ]] && matches+=("$match")
+    done < <(compgen -G "$repo_root/$pattern" || true)
+
+    local fragment=""
+    if [[ ${#matches[@]} -eq 0 ]]; then
+      fragment="$pattern missing"
+    else
+      local total_bytes=0
+      local newest_mtime=0
+      local match_mtime=0
+      for match in "${matches[@]}"; do
+        total_bytes=$((total_bytes + $(sdlc_file_size_bytes "$match")))
+        match_mtime=$(sdlc_file_mtime_epoch "$match")
+        if [[ "$match_mtime" -gt "$newest_mtime" ]]; then
+          newest_mtime="$match_mtime"
+        fi
+      done
+
+      if [[ "$newest_mtime" -le "$attempt_start_epoch" ]]; then
+        fragment="$pattern unchanged since attempt start (${#matches[@]} file(s), ${total_bytes}B)"
+      else
+        local age=$((now_epoch - newest_mtime))
+        if [[ "$age" -lt 0 ]]; then
+          age=0
+        fi
+        fragment="$pattern updated ${age}s ago (${#matches[@]} file(s), ${total_bytes}B)"
+      fi
+    fi
+
+    if [[ -n "$description" ]]; then
+      description="$description; "
+    fi
+    description="$description$fragment"
+  done <<< "${required_patterns//|/$'\n'}"
+
+  printf '%s\n' "$description"
 }
 
 START_FROM=""
@@ -345,11 +455,26 @@ execute_step_with_retries() {
   while [[ "$attempt" -le "$max_retries" ]]; do
     local attempt_log="$LOG_DIR/${base_name}_attempt${attempt}.log"
     local attempt_summary="$LOG_DIR/${base_name}_attempt${attempt}_summary.md"
+    local attempt_start_epoch
+    attempt_start_epoch=$(date +%s)
 
     sdlc_log "INFO" "Attempt $attempt/$max_retries"
 
+    local tracked_outputs_note=""
+    tracked_outputs_note=$(describe_tracked_outputs_at_start "$step_name" "$REPO_ROOT")
+    if [[ -n "$tracked_outputs_note" ]]; then
+      sdlc_log "INFO" "Tracking outputs for $label: $tracked_outputs_note"
+      sdlc_log "INFO" \
+        "Progress updates compare tracked outputs against this attempt start, so pre-existing seed files remain 'unchanged' until the step rewrites them."
+    fi
+
     if [[ "$HEARTBEAT_INTERVAL" -gt 0 ]]; then
-      emit_heartbeat_loop "$label (attempt $attempt)" "$HEARTBEAT_INTERVAL" &
+      emit_heartbeat_loop \
+        "$label (attempt $attempt)" \
+        "$HEARTBEAT_INTERVAL" \
+        "$step_name" \
+        "$REPO_ROOT" \
+        "$attempt_start_epoch" &
       STEP_HEARTBEAT_PID=$!
     fi
 

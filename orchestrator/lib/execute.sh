@@ -84,6 +84,8 @@ EOF
   sdlc_log "INFO" "Model: $CLAUDE_MODEL | Effort: $CLAUDE_EFFORT | Permission mode: $permission_mode"
   sdlc_log "INFO" "Timeout: ${timeout_seconds}s | Step log: $log_file"
   sdlc_log "INFO" "Follow progress: tail -f $log_file"
+  sdlc_log "INFO" \
+    "Claude stdout is final-response-only in this mode; heartbeat and tracked-output lines are the live progress signals until the step exits."
 
   set +e
   # Background the subshell so the orchestrator's INT/TERM trap can kill it

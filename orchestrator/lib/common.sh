@@ -59,6 +59,36 @@ sdlc_lookup_kv() {
   printf '%s\n' "$value"
 }
 
+sdlc_file_size_bytes() {
+  local path="$1"
+  [[ -e "$path" ]] || {
+    printf '0\n'
+    return 0
+  }
+
+  wc -c < "$path" | tr -d ' '
+}
+
+sdlc_file_mtime_epoch() {
+  local path="$1"
+  [[ -e "$path" ]] || {
+    printf '0\n'
+    return 0
+  }
+
+  if stat -f %m "$path" >/dev/null 2>&1; then
+    stat -f %m "$path"
+    return 0
+  fi
+
+  if stat -c %Y "$path" >/dev/null 2>&1; then
+    stat -c %Y "$path"
+    return 0
+  fi
+
+  printf '0\n'
+}
+
 sdlc_run_with_timeout() {
   local timeout_seconds="$1"
   shift
