@@ -17,11 +17,16 @@
 
 ## Procedure
 
-1. **Invoke Claude Code's `/ultrareview` slash command** in a dedicated session scoped to the branch changes:
-   ```
-   claude -p "/ultrareview" --permission-mode acceptEdits
-   ```
-   The command produces a review session that reads through the changes and surfaces bugs and design issues a careful reviewer would catch. Use it as a second independent pass on top of Step 10's semantic diff.
+1. **Emulate Claude Code's `/ultrareview` behavior in this Codex session.** Do not call `claude` or rely on the `/ultrareview` slash command. Treat this step as a fresh, independent review of the feature branch diff against `main`, separate from Step 10's semantic diff.
+
+   Review for:
+   - Correctness bugs and edge cases.
+   - Data-loss, migration, security, privacy, permission, or concurrency risks.
+   - API, contract, schema, and backwards-compatibility regressions.
+   - Missing or weak tests for the implemented behavior.
+   - Design issues that would make future maintenance or operation materially harder.
+
+   Read the relevant files, tests, artifacts, and diff context directly. Do not limit the pass to a superficial diff scan.
 
 2. **Capture the review output** verbatim at `.sdlc/artifacts/ultra-review.md`. Preserve the finding structure (severity, file, location, explanation) so later steps can act on it.
 
@@ -32,7 +37,7 @@
 
 4. **Append triage decisions** to `.sdlc/artifacts/ultra-review.md` under a `## Actions` section. For each finding, record:
    - File and location.
-   - Severity or category reported by `/ultrareview`.
+   - Severity or category reported by the Codex ultra-review pass.
    - Action taken (fix / defer / reject) and a one-sentence rationale.
    - Commit SHA or follow-up ticket ID where applicable.
 
@@ -55,11 +60,11 @@
 - Do not skip findings without recording a triage decision.
 - Do not mark a finding as rejected without a concrete, articulable reason.
 - Do not silently defer critical findings; link a follow-up ticket.
-- Do not rewrite or soften `/ultrareview` output in the captured report; triage goes in the `## Actions` section.
+- Do not rewrite or soften the Codex ultra-review output in the captured report; triage goes in the `## Actions` section.
 
 ## Completion criteria
 
-- `.sdlc/artifacts/ultra-review.md` exists and contains the `/ultrareview` findings plus an `## Actions` section.
+- `.sdlc/artifacts/ultra-review.md` exists and contains the Codex ultra-review findings plus an `## Actions` section.
 - Every finding has a triage decision.
 - All findings marked `fix` are resolved on the branch.
 - All findings marked `defer` have a follow-up ticket recorded.

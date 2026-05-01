@@ -16,21 +16,22 @@
 # Example: skip manual checklist steps during automated execution (default).
 # SKIP_STEPS=("16-merge.md" "17-cleanup.md")
 
-# Example: pin a different Claude model or effort level.
-# CLAUDE_MODEL="claude-opus-4-7"
-# CLAUDE_EFFORT="xhigh"
+# Example: pin a different Codex model or effort level.
+# CODEX_MODEL="azure/gpt-5.5"
+# CODEX_EFFORT="xhigh"
 
-# Example: adjust how often liveness/progress heartbeats print while Claude is
+# Example: adjust how often liveness/progress heartbeats print while Codex is
 # still working. Set to 0 to disable.
 # HEARTBEAT_INTERVAL=30
 
-# Example: tighten the permission mode for a specific step.
-# STEP_PERMISSION_MODES+=("10-semantic-diff-report.md=plan")
+# Example: tighten the Codex approval policy or sandbox for a specific step.
+# STEP_APPROVAL_POLICIES+=("10-semantic-diff-report.md=on-request")
+# STEP_SANDBOX_MODES+=("10-semantic-diff-report.md=workspace-write")
 
 # Example: cap how many 06↔07 test-fix iterations the orchestrator drives
 # before halting (defaults to 3). Lower this to fail fast in CI; raise it for
 # repos with large suites where partial fixes are common.
 # MAX_TEST_FIX_ITERATIONS=5
 
-# Example: pass additional Claude CLI flags (space-separated).
-# CLAUDE_EXTRA_ARGS="--max-budget-usd 10.00 --fallback-model claude-sonnet-4-6"
+# Example: pass additional Codex CLI flags (space-separated).
+# CODEX_EXTRA_ARGS="--skip-git-repo-check --ephemeral"

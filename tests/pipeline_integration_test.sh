@@ -15,13 +15,13 @@ setup_pipeline_fixture() {
   create_git_repo "$FAKE_REPO"
   mkdir -p "$FAKE_BIN"
 
-  # Stub claude so sdlc_require_command passes; nothing invokes it under --dry-run.
-  cat <<'STUB' > "$FAKE_BIN/claude"
+  # Stub codex so sdlc_require_command passes; nothing invokes it under --dry-run.
+  cat <<'STUB' > "$FAKE_BIN/codex"
 #!/usr/bin/env bash
-printf 'claude stub invoked (unexpected under --dry-run)\n' >&2
+printf 'codex stub invoked (unexpected under --dry-run)\n' >&2
 exit 1
 STUB
-  chmod +x "$FAKE_BIN/claude"
+  chmod +x "$FAKE_BIN/codex"
 
   # The pipeline discovers steps from SDLC_HOME; point it at this repository
   # so the renumbered step files are exercised end-to-end.
@@ -50,7 +50,7 @@ latest_manifest_path() {
 test_pipeline_dry_run_default_plan_excludes_manual_steps() {
   setup_pipeline_fixture
   run_pipeline_dry_run
-  assert_exit_code 0 "$CAPTURED_STATUS" "Expected --dry-run to succeed when claude is on PATH."
+  assert_exit_code 0 "$CAPTURED_STATUS" "Expected --dry-run to succeed when codex is on PATH."
 
   local manifest
   manifest=$(latest_manifest_path)
@@ -141,8 +141,8 @@ test_pipeline_dry_run_outside_git_repo_exits_nonzero() {
   use_temp_dir
   FAKE_BIN="$TEST_TEMP_DIR/bin"
   mkdir -p "$FAKE_BIN"
-  : > "$FAKE_BIN/claude"
-  chmod +x "$FAKE_BIN/claude"
+  : > "$FAKE_BIN/codex"
+  chmod +x "$FAKE_BIN/codex"
 
   set +e
   CAPTURED_OUTPUT=$(env "PATH=$FAKE_BIN:$PATH" "SDLC_HOME=$REPO_ROOT" \

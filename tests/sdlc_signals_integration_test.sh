@@ -2,9 +2,9 @@
 # Integration tests for the SDLC-3 operator-ergonomics contracts that unit
 # tests cannot exercise in isolation: the heartbeat loop must actually fire
 # while a step is in flight, and Ctrl+C must propagate to the backgrounded
-# Claude subshell and every descendant it spawned.
+# Codex subshell and every descendant it spawned.
 #
-# These tests drive the real `sdlc` wrapper against a fake `claude` shim so
+# These tests drive the real `sdlc` wrapper against a fake `codex` shim so
 # the backgrounded-subshell + signal-trap + pgrep walk are all exercised
 # end-to-end. A unit-only test would bypass the bash job-control behavior
 # that broke Ctrl+C in the first place.
@@ -17,9 +17,9 @@ TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 BIN_DIR="$REPO_ROOT/bin"
 
-# Set up a target git repo + task file + fake claude shim, and return the
+# Set up a target git repo + task file + fake codex shim, and return the
 # environment array the test should pass to `env`. Caller sets PATH/HOME first
-# via the caller-supplied arrays. $1 is the shim body (content of the `claude`
+# via the caller-supplied arrays. $1 is the shim body (content of the `codex`
 # command on PATH); $2 is the target-repo subdirectory name.
 setup_signal_fixture() {
   local shim_body="$1"
@@ -38,8 +38,8 @@ setup_signal_fixture() {
   printf '# Task\nSignal/heartbeat test fixture.\n' > "$TARGET_REPO/.sdlc/task.md"
 
   mkdir -p "$SHIM_DIR"
-  printf '%s\n' "$shim_body" > "$SHIM_DIR/claude"
-  chmod +x "$SHIM_DIR/claude"
+  printf '%s\n' "$shim_body" > "$SHIM_DIR/codex"
+  chmod +x "$SHIM_DIR/codex"
 }
 
 test_heartbeat_loop_emits_still_running_line_during_step() {
@@ -50,8 +50,19 @@ test_heartbeat_loop_emits_still_running_line_during_step() {
   # Shim sleeps 3 seconds before returning a valid Status line, giving the
   # 1-second heartbeat cadence at least two chances to fire during the step.
   setup_signal_fixture '#!/usr/bin/env bash
+summary_file=""
+previous_arg=""
+for arg in "$@"; do
+  if [[ "$previous_arg" == "--output-last-message" || "$previous_arg" == "-o" ]]; then
+    summary_file="$arg"
+    previous_arg=""
+    continue
+  fi
+  previous_arg="$arg"
+done
 sleep 3
-printf "5. Status: READY\n"' "hb-target"
+printf "5. Status: READY\n" > "$summary_file"
+printf "codex done\n"' "hb-target"
 
   local output
   local status=0
@@ -76,8 +87,19 @@ test_heartbeat_interval_zero_suppresses_heartbeat_lines() {
 
   # Same 3-second shim, but HEARTBEAT_INTERVAL=0 must disable the loop entirely.
   setup_signal_fixture '#!/usr/bin/env bash
+summary_file=""
+previous_arg=""
+for arg in "$@"; do
+  if [[ "$previous_arg" == "--output-last-message" || "$previous_arg" == "-o" ]]; then
+    summary_file="$arg"
+    previous_arg=""
+    continue
+  fi
+  previous_arg="$arg"
+done
 sleep 3
-printf "5. Status: READY\n"' "hb-off-target"
+printf "5. Status: READY\n" > "$summary_file"
+printf "codex done\n"' "hb-off-target"
 
   local output
   local status=0
@@ -98,10 +120,21 @@ test_tracked_output_progress_reports_seeded_artifact_then_update() {
   fi
 
   setup_signal_fixture '#!/usr/bin/env bash
+summary_file=""
+previous_arg=""
+for arg in "$@"; do
+  if [[ "$previous_arg" == "--output-last-message" || "$previous_arg" == "-o" ]]; then
+    summary_file="$arg"
+    previous_arg=""
+    continue
+  fi
+  previous_arg="$arg"
+done
 sleep 2
 printf "# Updated spec\n" > ".sdlc/artifacts/technical-spec.md"
 sleep 2
-printf "1. Accomplished\n- Updated spec.\n5. Status: READY\n"' "tracked-output-target"
+printf "1. Accomplished\n- Updated spec.\n5. Status: READY\n" > "$summary_file"
+printf "codex done\n"' "tracked-output-target"
 
   mkdir -p "$TARGET_REPO/.sdlc/artifacts"
   printf '# Seed spec\n' > "$TARGET_REPO/.sdlc/artifacts/technical-spec.md"
@@ -131,7 +164,7 @@ printf "1. Accomplished\n- Updated spec.\n5. Status: READY\n"' "tracked-output-t
     "Expected a later heartbeat to report that the tracked artifact had changed. Output: $output"
 }
 
-test_sdlc_terminate_signal_exits_130_and_kills_claude_descendants() {
+test_sdlc_terminate_signal_exits_130_and_kills_codex_descendants() {
   # NOTE ON SIGNAL CHOICE: the orchestrator traps `INT TERM` with the same
   # `handle_interrupt` function — terminate the step, stop heartbeats, exit
   # 130 — so this test exercises that exact machinery via SIGTERM rather
@@ -151,10 +184,10 @@ test_sdlc_terminate_signal_exits_130_and_kills_claude_descendants() {
   fi
 
   use_temp_dir
-  local pid_file="$TEST_TEMP_DIR/claude-shim.pid"
+  local pid_file="$TEST_TEMP_DIR/codex-shim.pid"
   # Shim records its own pid (which, after `exec`, becomes the `sleep 47`'s
   # pid) to a file so the test can poll for readiness synchronously — stdout
-  # from the shim would be buffered inside Claude's two-tee pipeline and not
+  # from the shim would be buffered inside Codex's output pipeline and not
   # visible to the orchestrator's caller until the pipeline drains at exit.
   # After the signal the test can also check whether that pid is still alive;
   # a leaked sleep means signal_process_tree failed to walk the tree.
@@ -177,8 +210,8 @@ SHIM
     commit --allow-empty -q -m "init"
   mkdir -p "$TARGET_REPO/.sdlc" "$SHIM_DIR"
   printf '# Task\nSIGINT test fixture.\n' > "$TARGET_REPO/.sdlc/task.md"
-  printf '%s\n' "$shim_body" > "$SHIM_DIR/claude"
-  chmod +x "$SHIM_DIR/claude"
+  printf '%s\n' "$shim_body" > "$SHIM_DIR/codex"
+  chmod +x "$SHIM_DIR/codex"
 
   local outfile="$TEST_TEMP_DIR/sigint.out"
 
@@ -206,12 +239,12 @@ SHIM
   if [[ ! -s "$pid_file" ]]; then
     kill -KILL "$sdlc_pid" 2>/dev/null || true
     wait "$sdlc_pid" 2>/dev/null || true
-    fail "claude shim never wrote its pid file within 15s. Output: $(cat "$outfile" 2>/dev/null || printf '(empty)\n')"
+    fail "codex shim never wrote its pid file within 15s. Output: $(cat "$outfile" 2>/dev/null || printf '(empty)\n')"
     return 1
   fi
 
-  local claude_pid
-  claude_pid=$(cat "$pid_file")
+  local codex_pid
+  codex_pid=$(cat "$pid_file")
 
   # See the NOTE ON SIGNAL CHOICE at the top of this function — TERM exercises
   # the same `handle_interrupt` path as Ctrl+C-driven INT.
@@ -229,13 +262,13 @@ SHIM
   local exit_status=$?
 
   if [[ "$exit_status" -ne 130 ]]; then
-    kill -KILL "$claude_pid" 2>/dev/null || true
+    kill -KILL "$codex_pid" 2>/dev/null || true
     fail "sdlc should exit 130 on terminate signal during a running step; got [$exit_status]. Output: $(cat "$outfile")"
     return 1
   fi
 
   if ! grep -q "Interrupt received" "$outfile"; then
-    kill -KILL "$claude_pid" 2>/dev/null || true
+    kill -KILL "$codex_pid" 2>/dev/null || true
     fail "Expected the handle_interrupt WARN banner. Output: $(cat "$outfile")"
     return 1
   fi
@@ -244,9 +277,9 @@ SHIM
   # descendants (timeout wrapper → sleep 47) do not survive the orchestrator's
   # exit. Give the tree-walk a brief moment to reap before checking.
   sleep 0.3
-  if kill -0 "$claude_pid" 2>/dev/null; then
-    kill -KILL "$claude_pid" 2>/dev/null || true
-    fail "claude descendant pid $claude_pid (sleep 47) was still alive after the interrupt. Output: $(cat "$outfile")"
+  if kill -0 "$codex_pid" 2>/dev/null; then
+    kill -KILL "$codex_pid" 2>/dev/null || true
+    fail "codex descendant pid $codex_pid (sleep 47) was still alive after the interrupt. Output: $(cat "$outfile")"
     return 1
   fi
 }

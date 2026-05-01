@@ -28,7 +28,7 @@ export SDLC_HOME
 
 print_help() {
   cat <<'EOF'
-sdlc — drive a Claude-Code-governed SDLC pipeline from branch to merge-ready PR.
+sdlc — drive a Codex-governed SDLC pipeline from branch to merge-ready PR.
 
 USAGE
   sdlc [REPO]                     Run the full pipeline (default: $PWD)
@@ -58,9 +58,9 @@ PIPELINE STEPS
     is planned. It appears as a top-level step only when targeted explicitly.
 
 DURING A RUN
-  Claude's final step response is printed when the step exits. While it is
-  running, the orchestrator emits heartbeat/progress lines and mirrors the
-  step log to a per-step file.
+  Codex progress output is mirrored to the step log while it runs. The final
+  step response is captured separately and printed in summary when the step
+  exits.
   Follow progress in another terminal with:   tail -f <step log path>
   The orchestrator prints the log path and tracked outputs when it starts a step.
   Press Ctrl+C to stop: the current step is terminated and the pipeline exits.
@@ -77,7 +77,7 @@ ARTIFACTS & LOGS  (all under the target repo)
 
 ENVIRONMENT OVERRIDES
   Per-repo settings go in .sdlc/overrides.sh (model, timeouts, retries,
-  permission modes, NOTIFICATION_WEBHOOK, etc.). See templates/overrides-template.sh.
+  approval policies, sandbox modes, NOTIFICATION_WEBHOOK, etc.). See templates/overrides-template.sh.
 
 COMPANION COMMANDS
   sdlc-init      Scaffold .sdlc/ in an existing repo (run once per repo)

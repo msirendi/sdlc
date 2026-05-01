@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Convenience wrapper that previews the pipeline without launching Claude Code.
+# Convenience wrapper that previews the pipeline without launching Codex.
 #
 # Equivalent to: sdlc --dry-run [args...]
 set -euo pipefail

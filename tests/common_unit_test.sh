@@ -3,7 +3,7 @@ set -euo pipefail
 
 # sdlc_lookup_kv and sdlc_git_has_non_log_changes are foundational helpers
 # that every other test module depends on. They were not modified on this
-# branch, but the Claude runner in execute.sh and the step-summary contract
+# branch, but the Codex runner in execute.sh and the step-summary contract
 # in validate.sh both fan out from them — an unnoticed regression here would
 # silently break per-step overrides and dirty-tree detection. Pinning their
 # behavior is the base on top of which the branch-specific tests assert.
