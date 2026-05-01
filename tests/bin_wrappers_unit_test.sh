@@ -70,15 +70,15 @@ test_sdlc_dry_run_against_target_repo() {
   git -C "$target_repo" -c user.email=test@example.com -c user.name=Test \
     commit --allow-empty -q -m "init"
 
-  # A fake `claude` binary satisfies the require-command check that
+  # A fake `codex` binary satisfies the require-command check that
   # run-pipeline.sh performs even under --dry-run.
   local shim_dir="$TEST_TEMP_DIR/shims"
   mkdir -p "$shim_dir"
-  cat >"$shim_dir/claude" <<'EOF'
+  cat >"$shim_dir/codex" <<'EOF'
 #!/usr/bin/env bash
 exit 0
 EOF
-  chmod +x "$shim_dir/claude"
+  chmod +x "$shim_dir/codex"
 
   # PATH contains only the wrapper dir, the shim dir, and core system tools.
   # No SDLC_HOME is exported -- the wrapper must infer it from its own path.

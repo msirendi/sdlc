@@ -14,29 +14,39 @@ load_config() {
   source "$REPO_ROOT/orchestrator/lib/common.sh"
 }
 
-test_config_defaults_claude_model_to_opus_4_7() {
+test_config_defaults_codex_model_to_azure_gpt_5_5() {
   load_config
-  assert_equals "claude-opus-4-7" "$CLAUDE_MODEL" \
-    "Expected Claude runner to default to Opus 4.7 per the staged switch from Codex."
+  assert_equals "azure/gpt-5.5" "$CODEX_MODEL" \
+    "Expected Codex runner to default to the Azure-prefixed gpt-5.5 model."
 }
 
-test_config_defaults_claude_effort_to_xhigh() {
+test_config_defaults_codex_effort_to_xhigh() {
   load_config
-  assert_equals "xhigh" "$CLAUDE_EFFORT" \
-    "Expected Claude runner to default to xhigh effort to match the documented pipeline behavior."
+  assert_equals "xhigh" "$CODEX_EFFORT" \
+    "Expected Codex runner to default to xhigh effort to match the documented pipeline behavior."
 }
 
-test_config_defaults_claude_permission_mode_to_accept_edits() {
+test_config_defaults_codex_provider_to_litellm() {
   load_config
-  assert_equals "acceptEdits" "$CLAUDE_PERMISSION_MODE" \
-    "Expected acceptEdits as the default permission mode since orchestrated steps commit files."
+  assert_equals "litellm" "$CODEX_MODEL_PROVIDER" \
+    "Expected Codex runner to use LiteLLM as the default model provider."
+  assert_equals "https://litellm.clarium.ai/v1" "$CODEX_BASE_URL" \
+    "Expected Codex runner to target the LiteLLM proxy by default."
 }
 
-test_config_honors_preset_claude_model_environment_override() {
-  local CLAUDE_MODEL="claude-sonnet-4-6"
+test_config_defaults_codex_execution_policy() {
   load_config
-  assert_equals "claude-sonnet-4-6" "$CLAUDE_MODEL" \
-    "Expected environment-level CLAUDE_MODEL to win over the default."
+  assert_equals "never" "$CODEX_APPROVAL_POLICY" \
+    "Expected non-interactive Codex runs to avoid approval prompts by default."
+  assert_equals "danger-full-access" "$CODEX_SANDBOX_MODE" \
+    "Expected orchestrated Codex steps to be able to edit the target repo by default."
+}
+
+test_config_honors_preset_codex_model_environment_override() {
+  local CODEX_MODEL="azure/gpt-5.5-preview"
+  load_config
+  assert_equals "azure/gpt-5.5-preview" "$CODEX_MODEL" \
+    "Expected environment-level CODEX_MODEL to win over the default."
 }
 
 test_config_step_timeouts_include_ultra_review_entry() {
@@ -118,7 +128,7 @@ test_config_step_timeouts_omit_manual_steps() {
 test_config_heartbeat_interval_has_sensible_default() {
   load_config
   # Heartbeat cadence is user-facing (it controls how often "still running"
-  # messages print during long Claude calls). Pin the default so overrides.sh
+  # messages print during long Codex calls). Pin the default so overrides.sh
   # authors can reason about it, and confirm it stays enabled by default.
   assert_equals "30" "$HEARTBEAT_INTERVAL" \
     "Expected HEARTBEAT_INTERVAL to default to 30s so long --print steps stay visibly alive."

@@ -1,11 +1,11 @@
 # AI-Governed SDLC Pipeline
 
-This repository is a runnable SDLC package driven by the Claude Code CLI, not just a set of markdown prompts. It contains:
+This repository is a runnable SDLC package driven by the Codex CLI, not just a set of markdown prompts. It contains:
 
 - A 17-step feature delivery process expressed as explicit step files.
 - An orchestrator that runs the automated steps in order, including a decoupled
   test-fix loop that separates writing tests, implementing code, running tests,
-  and fixing failures into independent Claude Code invocations.
+  and fixing failures into independent Codex invocations.
 - Repo-initialization helpers and artifact templates so later steps can consume durable outputs.
 - Manual closeout checklists for merge and cleanup.
 
@@ -24,7 +24,7 @@ The package is designed to govern the full feature lifecycle in a target reposit
 9. Review comment handling
 10. Semantic diff analysis
 11. Weak-change cleanup
-12. Ultra-review (`/ultrareview`) bug and design-issue pass
+12. Ultra-review bug and design-issue pass, emulating Claude Code's `/ultrareview` behavior with Codex
 13. Push and hook enforcement
 14. CI remediation
 15. Rebase and re-validation
@@ -35,7 +35,7 @@ Steps `01` through `15` are automated. Steps `16` and `17` are manual by default
 
 ### Decoupled test workflow
 
-Steps 3, 4, 6, and 7 are intentionally split so each Claude invocation has one
+Steps 3, 4, 6, and 7 are intentionally split so each Codex invocation has one
 job:
 
 - Step 3 writes the tests from the spec — no implementation, no test execution.
@@ -67,12 +67,12 @@ plan; it appears in run logs with an `(iter N)` suffix.
 Each governed repository should contain a tracked `.sdlc/` directory with:
 
 - `.sdlc/task.md`: feature intent and acceptance criteria
-- `.sdlc/overrides.sh`: optional per-repo model, timeout, or permission overrides
+- `.sdlc/overrides.sh`: optional per-repo model, timeout, approval, or sandbox overrides
 - `.sdlc/artifacts/technical-spec.md`: canonical spec produced by Step 2
 - `.sdlc/artifacts/test-results.md`: structured test-run report produced by Step 6 (the orchestrator parses its first `Result:` line to drive the 6↔7 fix loop)
 - `.sdlc/artifacts/pr-body.md`: canonical PR description produced by Step 8
 - `.sdlc/artifacts/semantic-review-actions.md`: remediation log produced by Step 11
-- `.sdlc/artifacts/ultra-review.md`: `/ultrareview` findings and triage produced by Step 12
+- `.sdlc/artifacts/ultra-review.md`: Codex ultra-review findings and triage produced by Step 12
 - `.sdlc/reports/semantic_diff_report_<ticket-id>.html`: reviewer-facing semantic diff report from Step 10
 - `.sdlc/logs/`: run logs, summaries, and rolling pipeline context; gitignored
 
@@ -80,8 +80,8 @@ The init script creates the directories and seed files inside an existing reposi
 
 ## Prerequisites
 
-- `claude` CLI installed, for example `npm install -g @anthropic-ai/claude-code`
-- Claude Code authenticated locally (`claude auth`)
+- `codex` CLI installed, for example `npm install -g @openai/codex`
+- Codex authenticated locally (`codex login`) or configured with `LITELLM_API_KEY` for the LiteLLM proxy
 - A git repository to govern
 - Any repo-specific access needed by the steps, such as GitHub or Linear
 
@@ -124,16 +124,20 @@ The wrappers resolve symlinks, so `SDLC_HOME` still points at the real repo.
 
 ## Default model configuration
 
-The orchestrator invokes Claude Code in headless mode (`claude --print`) with:
+The orchestrator invokes Codex in non-interactive mode (`codex exec`) with:
 
-- Model: `claude-opus-4-7`
-- Effort: `xhigh`
-- Permission mode: `acceptEdits`
+- Model: `azure/gpt-5.5`
+- Model provider: `litellm`
+- LiteLLM proxy: `https://litellm.clarium.ai/v1`
+- Effort: extra high (`xhigh`)
+- Approval policy: `never`
+- Sandbox mode: `danger-full-access`
 
-Because `--print` emits the final step response on stdout when the Claude
-process exits, the orchestrator also emits heartbeat/progress lines during long
-steps. By default those liveness updates print every 30 seconds and include any
-tracked artifact paths for the current step.
+The runner writes Codex's final response with `--output-last-message` so the
+summary file stays prose-only even when `codex exec` emits progress output.
+The orchestrator also emits heartbeat/progress lines during long steps. By
+default those liveness updates print every 30 seconds and include any tracked
+artifact paths for the current step.
 
 Override any of these per-repo in `.sdlc/overrides.sh` (see [`templates/overrides-template.sh`](templates/overrides-template.sh)).
 

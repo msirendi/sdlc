@@ -13,19 +13,26 @@ ARTIFACTS_DIR_REL="${ARTIFACTS_DIR_REL:-.sdlc/artifacts}"
 REPORTS_DIR_REL="${REPORTS_DIR_REL:-.sdlc/reports}"
 LOGS_DIR_REL="${LOGS_DIR_REL:-.sdlc/logs}"
 
-# Claude Code CLI configuration. Opus 4.7 with xhigh effort is the default.
-CLAUDE_MODEL="${CLAUDE_MODEL:-claude-opus-4-7}"
-CLAUDE_EFFORT="${CLAUDE_EFFORT:-xhigh}"
-CLAUDE_PERMISSION_MODE="${CLAUDE_PERMISSION_MODE:-acceptEdits}"
-CLAUDE_EXTRA_ARGS="${CLAUDE_EXTRA_ARGS:-}"
+# Codex CLI configuration. The default routes gpt-5.5 through the Azure-backed
+# LiteLLM proxy with extra-high reasoning effort.
+CODEX_MODEL="${CODEX_MODEL:-azure/gpt-5.5}"
+CODEX_EFFORT="${CODEX_EFFORT:-xhigh}"
+CODEX_MODEL_PROVIDER="${CODEX_MODEL_PROVIDER:-litellm}"
+CODEX_PROVIDER_NAME="${CODEX_PROVIDER_NAME:-Clarium LiteLLM (Azure)}"
+CODEX_BASE_URL="${CODEX_BASE_URL:-https://litellm.clarium.ai/v1}"
+CODEX_PROVIDER_ENV_KEY="${CODEX_PROVIDER_ENV_KEY:-LITELLM_API_KEY}"
+CODEX_WIRE_API="${CODEX_WIRE_API:-responses}"
+CODEX_APPROVAL_POLICY="${CODEX_APPROVAL_POLICY:-never}"
+CODEX_SANDBOX_MODE="${CODEX_SANDBOX_MODE:-danger-full-access}"
+CODEX_EXTRA_ARGS="${CODEX_EXTRA_ARGS:-}"
 
 DEFAULT_TIMEOUT="${DEFAULT_TIMEOUT:-1800}"
 DEFAULT_RETRIES="${DEFAULT_RETRIES:-2}"
 INTER_STEP_DELAY="${INTER_STEP_DELAY:-5}"
 DEFAULT_INCLUDE_MANUAL="${DEFAULT_INCLUDE_MANUAL:-false}"
-# Emit "still running" heartbeats while a step's Claude call is in flight.
-# 30s keeps long-running `--print` invocations visibly alive even when Claude
-# does not emit stdout until the final response.
+# Emit "still running" heartbeats while a step's Codex call is in flight.
+# 30s keeps long-running non-interactive invocations visibly alive even when
+# Codex has not emitted a final response yet.
 # Set to 0 to disable. Clamped to the default when the override is empty or
 # non-numeric so the `[[ -gt 0 ]]` guard in run-pipeline.sh can't crash the
 # pipeline on a stray `HEARTBEAT_INTERVAL=""` in overrides.sh.
@@ -70,14 +77,15 @@ STEP_RETRY_COUNTS=(
 # Test-fix loop: after Step 6 (run-tests) writes its report, the orchestrator
 # re-invokes Step 7 (fix) and then Step 6 again until the report's `Result:` line
 # reads PASS or this iteration cap is hit. Decoupling 'run' from 'fix' is the
-# whole point — keep them separate Claude invocations.
+# whole point — keep them separate Codex invocations.
 TEST_RUN_STEP="${TEST_RUN_STEP:-06-run-tests.md}"
 TEST_FIX_STEP="${TEST_FIX_STEP:-07-fix-test-failures.md}"
 TEST_RESULTS_REL="${TEST_RESULTS_REL:-.sdlc/artifacts/test-results.md}"
 MAX_TEST_FIX_ITERATIONS="${MAX_TEST_FIX_ITERATIONS:-3}"
 
-# Per-step permission-mode overrides, if needed. Format: "step.md=mode".
-STEP_PERMISSION_MODES=()
+# Per-step Codex execution overrides, if needed. Format: "step.md=value".
+STEP_APPROVAL_POLICIES=()
+STEP_SANDBOX_MODES=()
 
 # Canonical durable outputs that make the pipeline stateful across steps.
 STEP_REQUIRED_PATTERNS=(

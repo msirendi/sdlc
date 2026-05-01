@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-run_claude_step() {
+run_codex_step() {
   local step_file="$1"
   local task_file="$2"
   local context_file="$3"
@@ -12,20 +12,22 @@ run_claude_step() {
   local step_name
   step_name=$(basename "$step_file")
 
-  local permission_mode
-  local -a claude_args=()
+  local approval_policy
+  local sandbox_mode
+  local -a codex_args=()
   local step_instructions
   local task_description=""
   local prior_context=""
   local git_status=""
   local full_prompt=""
 
-  permission_mode=$(sdlc_lookup_kv STEP_PERMISSION_MODES "$step_name" "$CLAUDE_PERMISSION_MODE")
+  approval_policy=$(sdlc_lookup_kv STEP_APPROVAL_POLICIES "$step_name" "$CODEX_APPROVAL_POLICY")
+  sandbox_mode=$(sdlc_lookup_kv STEP_SANDBOX_MODES "$step_name" "$CODEX_SANDBOX_MODE")
 
-  if [[ -n "$CLAUDE_EXTRA_ARGS" ]]; then
+  if [[ -n "$CODEX_EXTRA_ARGS" ]]; then
     # shellcheck disable=SC2206
-    local -a extra_args=($CLAUDE_EXTRA_ARGS)
-    claude_args+=("${extra_args[@]}")
+    local -a extra_args=($CODEX_EXTRA_ARGS)
+    codex_args+=("${extra_args[@]}")
   fi
 
   if [[ -f "$task_file" ]]; then
@@ -81,17 +83,17 @@ Use this exact structure in the final message:
 EOF
 )
 
-  sdlc_log "INFO" "Model: $CLAUDE_MODEL | Effort: $CLAUDE_EFFORT | Permission mode: $permission_mode"
+  sdlc_log "INFO" "Model: $CODEX_MODEL | Provider: $CODEX_MODEL_PROVIDER | Effort: $CODEX_EFFORT | Approval: $approval_policy | Sandbox: $sandbox_mode"
   sdlc_log "INFO" "Timeout: ${timeout_seconds}s | Step log: $log_file"
   sdlc_log "INFO" "Follow progress: tail -f $log_file"
   sdlc_log "INFO" \
-    "Claude stdout is final-response-only in this mode; heartbeat and tracked-output lines are the live progress signals until the step exits."
+    "Codex stdout is mirrored to the step log; the final response is captured separately for validation and downstream context."
 
   set +e
   # Background the subshell so the orchestrator's INT/TERM trap can kill it
   # cleanly. A synchronous subshell inside a pipeline blocks bash's signal
   # delivery until the inner command exits, which is why plain Ctrl+C
-  # previously did nothing useful on a long-running Claude step.
+  # previously did nothing useful on a long-running Codex step.
   #
   # CURRENT_STEP_PID is intentionally not `local` — the orchestrator's
   # interrupt handler reads it from the parent scope to terminate the step.
@@ -107,32 +109,47 @@ EOF
     # Preserve the original stderr on FD 3 before routing the subshell's own
     # stderr (e.g. bash's "Terminated: 15" job-end notice when we SIGKILL it
     # during interrupt handling) into the step log so it doesn't clutter the
-    # terminal. The `>&3` in the process substitution below keeps claude's
+    # terminal. The `>&3` in the process substitution below keeps codex's
     # stderr flowing to the operator's terminal at its original destination;
     # without saving it first, `>&2` would point at the log file (thanks to
-    # the exec) and claude's stderr would be silently duplicated into the
+    # the exec) and codex's stderr would be silently duplicated into the
     # log file and missing from the operator's terminal.
     exec 3>&2 2>>"$log_file"
-    # --output-format is pinned to 'text' because $summary_file is written
-    # verbatim from claude's stdout below and downstream steps 9 and 10 read
-    # it as prose. Any other format (stream-json, json) would silently break
-    # them. Stderr is routed into $log_file only so framework chatter never
+    # --output-last-message keeps the downstream summary contract prose-only
+    # even though codex exec may emit progress/status output while it works.
+    # Stderr is routed into $log_file only so framework chatter never
     # contaminates the summary the retry/validator loop consumes.
     printf '%s' "$full_prompt" | sdlc_run_with_timeout "$timeout_seconds" \
-      claude \
-        --print \
-        --model "$CLAUDE_MODEL" \
-        --effort "$CLAUDE_EFFORT" \
-        --permission-mode "$permission_mode" \
-        --output-format text \
-        ${claude_args[@]+"${claude_args[@]}"} \
+      codex \
+        --ask-for-approval "$approval_policy" \
+      exec \
+        --model "$CODEX_MODEL" \
+        --cd "$repo_root" \
+        --sandbox "$sandbox_mode" \
+        --color never \
+        --output-last-message "$summary_file" \
+        --config "model_provider=\"$CODEX_MODEL_PROVIDER\"" \
+        --config "model_reasoning_effort=\"$CODEX_EFFORT\"" \
+        --config "api_base_url=\"$CODEX_BASE_URL\"" \
+        --config "model_providers.$CODEX_MODEL_PROVIDER.name=\"$CODEX_PROVIDER_NAME\"" \
+        --config "model_providers.$CODEX_MODEL_PROVIDER.base_url=\"$CODEX_BASE_URL\"" \
+        --config "model_providers.$CODEX_MODEL_PROVIDER.env_key=\"$CODEX_PROVIDER_ENV_KEY\"" \
+        --config "model_providers.$CODEX_MODEL_PROVIDER.wire_api=\"$CODEX_WIRE_API\"" \
+        ${codex_args[@]+"${codex_args[@]}"} \
+        - \
         2> >(tee -a "$log_file" >&3) \
-      | tee "$summary_file" \
       | tee -a "$log_file"
-    # Pipeline is: printf | sdlc_run_with_timeout claude | tee summary | tee log.
-    # The claude (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0]
+    # Pipeline is: printf | sdlc_run_with_timeout codex | tee log.
+    # The codex (and timeout-wrapper) exit code is PIPESTATUS[1]; PIPESTATUS[0]
     # is always printf's success and would mask real failures from the retry loop.
-    exit "${PIPESTATUS[1]}"
+    codex_exit="${PIPESTATUS[1]}"
+    if [[ -s "$summary_file" ]]; then
+      {
+        printf '\n\n'
+        cat "$summary_file"
+      } >> "$log_file"
+    fi
+    exit "$codex_exit"
   ) &
   CURRENT_STEP_PID=$!
   wait "$CURRENT_STEP_PID"

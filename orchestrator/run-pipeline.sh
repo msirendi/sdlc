@@ -11,7 +11,7 @@ source "$SDLC_HOME/orchestrator/lib/validate.sh"
 source "$SDLC_HOME/orchestrator/lib/test_fix_loop.sh"
 
 # Globals the interrupt handler reads. execute.sh sets CURRENT_STEP_PID to the
-# PID of the backgrounded Claude subshell; the heartbeat loop below sets
+# PID of the backgrounded Codex subshell; the heartbeat loop below sets
 # STEP_HEARTBEAT_PID. Both stay empty when no step is active.
 CURRENT_STEP_PID=""
 STEP_HEARTBEAT_PID=""
@@ -25,7 +25,7 @@ stop_heartbeat() {
 }
 
 # Signal a process and every descendant, walking the tree so grandchildren
-# (the tee children, the Claude CLI, and anything it spawned) don't linger.
+# (the tee children, the Codex CLI, and anything it spawned) don't linger.
 # Job control is off in a non-interactive shell, so the backgrounded subshell
 # inherits our pgid — `kill -<signal> -PGID` can't single it out. pgrep -P is
 # portable across macOS and Linux and makes no assumptions about pgid layout.
@@ -46,7 +46,7 @@ terminate_current_step() {
     signal_process_tree TERM "$pid"
     # Give the subshell up to 2 seconds (20 * 100ms) to drain its tee pipes
     # before escalating to KILL — long enough for the trailing bytes of
-    # Claude's response to flush into the summary file so the operator does
+    # Codex's response to flush into the summary file so the operator does
     # not lose the partial output on Ctrl+C, short enough that a wedged
     # child does not stall the exit perceptibly.
     local waited=0
@@ -225,7 +225,7 @@ Options:
   --start-from STEP.md  Start execution from a specific step filename
   --only STEP.md        Execute exactly one step filename
   --include-manual      Include manual checklist steps in the run plan
-  --dry-run             Print the execution plan without launching Claude Code
+  --dry-run             Print the execution plan without launching Codex
   -h, --help            Show this help text
 EOF
 }
@@ -286,7 +286,7 @@ if [[ -f "$REPO_ROOT/.sdlc/overrides.sh" ]]; then
   source "$REPO_ROOT/.sdlc/overrides.sh"
 fi
 
-sdlc_require_command "claude" "Install it first: npm install -g @anthropic-ai/claude-code"
+sdlc_require_command "codex" "Install it first: npm install -g @openai/codex"
 
 STEP_FILES=()
 while IFS= read -r step_file; do
@@ -412,7 +412,7 @@ for step_file in "${FILTERED_STEPS[@]}"; do
 done
 
 if [[ "$DRY_RUN" == "true" ]]; then
-  sdlc_log "INFO" "Dry run requested. No Claude Code steps were executed."
+  sdlc_log "INFO" "Dry run requested. No Codex steps were executed."
   if [[ ${#SKIPPED_MANUAL_STEPS[@]} -gt 0 ]]; then
     sdlc_log "INFO" "Manual checklist steps remain: ${SKIPPED_MANUAL_STEPS[*]}"
   fi
@@ -479,7 +479,7 @@ execute_step_with_retries() {
     fi
 
     set +e
-    run_claude_step \
+    run_codex_step \
       "$step_file" \
       "$TASK_FILE" \
       "$CONTEXT_FILE" \

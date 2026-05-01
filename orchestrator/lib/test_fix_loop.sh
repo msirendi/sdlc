@@ -2,7 +2,7 @@
 
 # Helpers for the Step 6 (run-tests) ↔ Step 7 (fix-test-failures) loop. The
 # orchestrator drives this loop so that running tests and fixing code stay in
-# separate Claude invocations.
+# separate Codex invocations.
 
 # Read the first `Result:` line from a test-results report and echo PASS, FAIL,
 # or UNKNOWN. The orchestrator treats UNKNOWN as a non-pass and still invokes
